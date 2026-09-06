@@ -3376,5 +3376,133 @@
     "status": "skipped_invalid_domain",
     "error": "HR Mailbox does not exist / Deactivated (550 5.1.1)",
     "timestamp": "2026-09-06T05:37:18.561Z"
+  },
+  {
+    "email": "harith.chambravalli@observe.ai",
+    "name": "Harith Chambravalli",
+    "company": "Observe",
+    "status": "skipped_invalid_domain",
+    "error": "HR Mailbox does not exist / Deactivated (550 5.1.1)",
+    "timestamp": "2026-09-06T05:37:20.201Z"
+  },
+  {
+    "email": "harpreet.bali@nvish.com",
+    "name": "Harpreet Bali",
+    "company": "Nvish",
+    "status": "skipped_invalid_domain",
+    "error": "HR Mailbox does not exist / Deactivated (550 5.1.1)",
+    "timestamp": "2026-09-06T05:37:24.040Z"
+  },
+  {
+    "email": "harshk@elementsgs.com",
+    "name": "Harsh Khanna",
+    "company": "Global Payroll Atlas",
+    "status": "skipped_invalid_domain",
+    "error": "HR Mailbox does not exist / Deactivated (550 5.1.1)",
+    "timestamp": "2026-09-06T05:37:25.908Z"
+  },
+  {
+    "email": "harshada.moharil@freshgravity.com",
+    "name": "Harshada Moharil",
+    "company": "Freshgravity",
+    "status": "skipped_invalid_domain",
+    "error": "HR Mailbox does not exist / Deactivated (550 5.1.1)",
+    "timestamp": "2026-09-06T05:37:27.436Z"
+  },
+  {
+    "email": "harshida@cctech.co.in",
+    "name": "Harshida Bhamare",
+    "company": "Cctech",
+    "status": "skipped_invalid_domain",
+    "error": "HR Mailbox does not exist / Deactivated (550 5.1.1)",
+    "timestamp": "2026-09-06T05:37:28.239Z"
+  },
+  {
+    "email": "husahu@ciphercloud.com",
+    "name": "Harshiika Upadhyay",
+    "company": "Ciphercloud",
+    "status": "skipped_invalid_domain",
+    "error": "HR Mailbox does not exist / Deactivated (550 5.1.1)",
+    "timestamp": "2026-09-06T05:37:30.151Z"
+  },
+  {
+    "email": "harshita.rathore@moonfroglabs.com",
+    "name": "Harshita Rathore",
+    "company": "of HR Moonfrog Labs",
+    "status": "skipped_invalid_domain",
+    "error": "HR Mailbox does not exist / Deactivated (550 5.1.1)",
+    "timestamp": "2026-09-06T05:37:31.480Z"
+  },
+  {
+    "email": "imran.h@apar.com",
+    "name": "Haseeb Imran",
+    "company": "Software",
+    "status": "sent",
+    "messageId": "<63247140-5938-5b4d-45bd-05a3df514237@gmail.com>",
+    "timestamp": "2026-09-06T05:37:39.889Z"
+  },
+  {
+    "email": "heena@clevertap.com",
+    "name": "Heena Bawa",
+    "company": "Clevertap",
+    "status": "skipped_invalid_domain",
+    "error": "HR Mailbox does not exist / Deactivated (550 5.1.1)",
+    "timestamp": "2026-09-06T05:37:44.944Z"
+  },
+  {
+    "email": "hemant.batra@supraits.com",
+    "name": "Hemant Batra",
+    "company": "Manager / Head RMG SupraES",
+    "status": "skipped_invalid_domain",
+    "error": "HR Mailbox does not exist / Deactivated (550 5.1.1)",
+    "timestamp": "2026-09-06T05:37:46.290Z"
+  },
+  {
+    "email": "hemant.pawar@ndsglobal.com",
+    "name": "Hemant Pawar",
+    "company": "Ndsglobal",
+    "status": "skipped_invalid_domain",
+    "error": "HR Mailbox does not exist / Deactivated (550 5.1.1)",
+    "timestamp": "2026-09-06T05:37:46.819Z"
+  },
+  {
+    "email": "hemendra.bist@u2opiamobile.com",
+    "name": "Hemendra Bist",
+    "company": "U2opiamobile",
+    "status": "skipped_invalid_domain",
+    "error": "HR Mailbox does not exist / Deactivated (550 5.1.1)",
+    "timestamp": "2026-09-06T05:37:47.840Z"
+  },
+  {
+    "email": "hemlata.goel@shl.com",
+    "name": "Hemlata Goel",
+    "company": "Shl",
+    "status": "sent",
+    "messageId": "<8a55af28-2f23-cb65-c0ee-5ce718106a27@gmail.com>",
+    "timestamp": "2026-09-06T05:37:57.678Z"
+  },
+  {
+    "email": "hemraj@cloudthat.in",
+    "name": "Hemraj Desai",
+    "company": "Cloudthat",
+    "status": "skipped_invalid_domain",
+    "error": "HR Mailbox does not exist / Deactivated (550 5.1.1)",
+    "timestamp": "2026-09-06T05:38:02.729Z"
+  },
+  {
+    "email": "hsoni@infosenseglobal.com",
+    "name": "Hetal",
+    "company": "Inc",
+    "status": "skipped_invalid_domain",
+    "error": "HR Mailbox does not exist / Deactivated (550 5.1.1)",
+    "timestamp": "2026-09-06T05:38:03.734Z"
+  },
+  {
+    "email": "hima@systango.com",
+    "name": "Hima Kulshrestha",
+    "company": "Systango",
+    "status": "sent",
+    "messageId": "<7c5b9e14-78c3-025b-fe01-5a4d61dd4bef@gmail.com>",
+    "timestamp": "2026-09-06T05:38:13.187Z"
   }
 ]

@@ -166,9 +166,13 @@ async function verifyMailboxExists(email) {
         resolve(res);
       };
 
-      // Zero-Tolerance Strict Mode: ONLY send if server EXPLICITLY confirmed 250 OK
+      // Balanced Pre-Check Mode:
+      // 1. If server explicitly returns 550 5.1.1 / user unknown -> SKIP (100% dead mailbox)
+      // 2. If domain has no MX records -> SKIP (100% dead company)
+      // 3. If server confirms 250 -> SEND (100% active mailbox)
+      // 4. If firewall/timeout on port 25 -> ALLOW SEND so real Google/Microsoft HRs aren't skipped!
       const hardTimer = setTimeout(() => {
-        finish({ valid: false, reason: 'Strict Mode: Mailbox unconfirmed (Timeout/Firewalled)' });
+        finish({ valid: true, reason: 'Probe timeout (fallback to send)' });
       }, 3500);
 
       try {
@@ -193,27 +197,27 @@ async function verifyMailboxExists(email) {
             } else if (line.startsWith('250') || line.startsWith('251')) {
               finish({ valid: true, reason: 'Mailbox verified active (250 OK)' });
             } else {
-              finish({ valid: false, reason: 'Strict Mode: Ambiguous server response (Rejected for safety)' });
+              finish({ valid: true, reason: 'Ambiguous response / Catch-all (Allowed)' });
             }
           }
         });
 
         socket.on('error', (err) => {
-          finish({ valid: false, reason: `Strict Mode: Cannot verify (${err.message})` });
+          finish({ valid: true, reason: `Probe unconnectable: ${err.message} (Allowed)` });
         });
 
         socket.on('timeout', () => {
-          finish({ valid: false, reason: 'Strict Mode: Probe timeout' });
+          finish({ valid: true, reason: 'Probe timeout (Allowed)' });
         });
       } catch (err) {
-        finish({ valid: false, reason: `Strict Mode: Socket error (${err.message})` });
+        finish({ valid: true, reason: `Socket error: ${err.message} (Allowed)` });
       }
     });
 
     mailboxCache.set(trimmedEmail, probeResult);
     return probeResult;
   } catch (err) {
-    return { valid: false, reason: 'Strict Mode: Verification error: ' + err.message };
+    return { valid: true, reason: 'Verification bypassed: ' + err.message };
   }
 }
 
