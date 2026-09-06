@@ -150,51 +150,63 @@ async function verifyMailboxExists(email) {
     const host = records[0].exchange;
 
     const probeResult = await new Promise((resolve) => {
-      const socket = net.createConnection(25, host);
       let step = 0;
       let closed = false;
+      let socket = null;
 
       const finish = (res) => {
         if (closed) return;
         closed = true;
-        try { socket.write('QUIT\r\n'); } catch (e) {}
-        try { socket.destroy(); } catch (e) {}
+        if (hardTimer) clearTimeout(hardTimer);
+        if (socket) {
+          try { socket.write('QUIT\r\n'); } catch (e) {}
+          try { socket.destroy(); } catch (e) {}
+        }
         resolve(res);
       };
 
-      socket.setEncoding('utf8');
-      socket.setTimeout(6000);
+      // Strict 3.5s hard timeout for connect + handshake
+      const hardTimer = setTimeout(() => {
+        finish({ valid: true, reason: 'Probe timeout (fallback to send)' });
+      }, 3500);
 
-      socket.on('data', (chunk) => {
-        const line = chunk.trim();
-        if (step === 0 && line.startsWith('220')) {
-          step = 1;
-          socket.write('HELO mail.check\r\n');
-        } else if (step === 1 && line.startsWith('250')) {
-          step = 2;
-          socket.write('MAIL FROM:<tiwariketan045@gmail.com>\r\n');
-        } else if (step === 2 && line.startsWith('250')) {
-          step = 3;
-          socket.write(`RCPT TO:<${trimmedEmail}>\r\n`);
-        } else if (step === 3) {
-          if (/^55[0-4]/.test(line) || line.includes('5.1.1') || line.toLowerCase().includes('does not exist')) {
-            finish({ valid: false, reason: 'HR Mailbox does not exist / Deactivated (550 5.1.1)' });
-          } else if (line.startsWith('250') || line.startsWith('251')) {
-            finish({ valid: true, reason: 'Mailbox verified active (250 OK)' });
-          } else {
-            finish({ valid: true, reason: 'Ambiguous response / Catch-all' });
+      try {
+        socket = net.createConnection(25, host);
+        socket.setEncoding('utf8');
+        socket.setTimeout(3000);
+
+        socket.on('data', (chunk) => {
+          const line = chunk.trim();
+          if (step === 0 && line.startsWith('220')) {
+            step = 1;
+            socket.write('HELO mail.check\r\n');
+          } else if (step === 1 && line.startsWith('250')) {
+            step = 2;
+            socket.write('MAIL FROM:<tiwariketan045@gmail.com>\r\n');
+          } else if (step === 2 && line.startsWith('250')) {
+            step = 3;
+            socket.write(`RCPT TO:<${trimmedEmail}>\r\n`);
+          } else if (step === 3) {
+            if (/^55[0-4]/.test(line) || line.includes('5.1.1') || line.toLowerCase().includes('does not exist')) {
+              finish({ valid: false, reason: 'HR Mailbox does not exist / Deactivated (550 5.1.1)' });
+            } else if (line.startsWith('250') || line.startsWith('251')) {
+              finish({ valid: true, reason: 'Mailbox verified active (250 OK)' });
+            } else {
+              finish({ valid: true, reason: 'Ambiguous response / Catch-all' });
+            }
           }
-        }
-      });
+        });
 
-      socket.on('error', (err) => {
-        // Fallback to true on network/firewall issue so legitimate recipients aren't dropped
-        finish({ valid: true, reason: `Probe unconnectable: ${err.message}` });
-      });
+        socket.on('error', (err) => {
+          finish({ valid: true, reason: `Probe unconnectable: ${err.message}` });
+        });
 
-      socket.on('timeout', () => {
-        finish({ valid: true, reason: 'Probe timeout' });
-      });
+        socket.on('timeout', () => {
+          finish({ valid: true, reason: 'Probe timeout' });
+        });
+      } catch (err) {
+        finish({ valid: true, reason: `Socket error: ${err.message}` });
+      }
     });
 
     mailboxCache.set(trimmedEmail, probeResult);
