@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Resume Blaster | HR Outreach Automation</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="app-layout">
+    <!-- Top Navigation / Status Header -->
+    <header class="app-header">
+      <div class="header-brand">
+        <div class="brand-badge">⚡ DIRECT DISPATCH</div>
+        <h1>Resume Blaster</h1>
+        <span class="version-tag">v1.2</span>
+      </div>
+      <div class="header-actions">
+        <div id="smtpStatusBadge" class="status-indicator checking">
+          <span class="dot"></span>
+          <span class="status-text">Checking Gmail SMTP...</span>
+        </div>
+        <button id="recheckSmtpBtn" class="btn-icon" title="Test Gmail Connection">🔄</button>
+      </div>
+    </header>
+
+    <!-- Main Workspace Grid -->
+    <main class="workspace-grid">
+      <!-- LEFT COLUMN: Campaign Configuration -->
+      <section class="panel composer-panel">
+        <div class="panel-header">
+          <h2>1. Sender & Message Details</h2>
+          <span class="badge-accent">Step 1</span>
+        </div>
+
+        <div class="form-group">
+          <label for="senderName">Your Full Name <span class="required">*</span></label>
+          <input type="text" id="senderName" placeholder="e.g. Ketan Tiwari" value="Ketan Tiwari">
+        </div>
+
+        <!-- Resume Attachment Zone -->
+        <div class="form-group">
+          <label>Resume PDF Attachment <span class="required">*</span> <span class="hint">(Max 10MB, PDF only)</span></label>
+          <div id="resumeDropzone" class="dropzone">
+            <input type="file" id="resumeFileInput" accept=".pdf,application/pdf" hidden>
+            <div class="dropzone-empty" id="dropzoneEmpty">
+              <div class="dropzone-icon">📄</div>
+              <p class="dropzone-title">Drag & drop your resume PDF here</p>
+              <p class="dropzone-subtitle">or <button type="button" class="btn-link" id="browseResumeBtn">browse from files</button></p>
+            </div>
+            <div class="dropzone-filled hidden" id="dropzoneFilled">
+              <div class="file-info">
+                <span class="file-icon">📑</span>
+                <div>
+                  <div class="file-name" id="fileNameDisplay">Resume.pdf</div>
+                  <div class="file-size" id="fileSizeDisplay">0 KB</div>
+                </div>
+              </div>
+              <button type="button" class="btn-icon-danger" id="removeFileBtn" title="Remove PDF">✕</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Subject Line -->
+        <div class="form-group">
+          <div class="label-with-actions">
+            <label for="emailSubject">Subject Line <span class="required">*</span></label>
+            <div class="tag-helper">
+              <span>Insert:</span>
+              <button type="button" class="pill-btn" data-insert="subject" data-val="{{name}}">+ Recipient Name</button>
+              <button type="button" class="pill-btn" data-insert="subject" data-val="{{company}}">+ Company</button>
+            </div>
+          </div>
+          <input type="text" id="emailSubject" value="Application: Software & AI Engineer - Ketan Tiwari - {{company}}">
+        </div>
+
+        <!-- Message Body -->
+        <div class="form-group">
+          <div class="label-with-actions">
+            <label for="emailMessage">Cover Message Body <span class="required">*</span></label>
+            <div class="tag-helper">
+              <span>Insert:</span>
+              <button type="button" class="pill-btn" data-insert="message" data-val="{{name}}">+ Recipient Name</button>
+              <button type="button" class="pill-btn" data-insert="message" data-val="{{company}}">+ Company</button>
+            </div>
+          </div>
+          <textarea id="emailMessage" rows="9" placeholder="Enter your cover message...">Dear {{name}},
+
+I hope you are doing well. I am writing to express my strong interest in software engineering and AI roles at {{company}}.
+
+I am a Full-Stack Engineer specializing in Generative AI, Agentic workflows, and Machine Learning—experienced in building end-to-end architectures from LLM/RAG pipelines to scalable backend APIs and user interfaces.
+
+Please find my resume attached for your review. I would welcome the opportunity for a brief conversation to discuss how my skillset aligns with {{company}}'s current goals.
+
+Thank you for your time and consideration.
+
+Best regards,
+Ketan Tiwari
+tiwariketan045@gmail.com</textarea>
+        </div>
+
+        <!-- Autopilot Campaign Controls -->
+        <div class="dispatch-box">
+          <div class="dispatch-box-title">
+            <span>⚡ Automated Batch Runner</span>
+            <span class="safe-badge">Safe Throttle Active</span>
+          </div>
+
+          <div class="campaign-config-row">
+            <div class="config-field">
+              <label for="batchSizeInput">Batch Size:</label>
+              <input type="number" id="batchSizeInput" value="13" min="1" max="50">
+            </div>
+            <div class="config-field">
+              <label for="pauseMinutesInput">Pause Between Batches:</label>
+              <select id="pauseMinutesInput">
+                <option value="30" selected>30 minutes (Safest)</option>
+                <option value="20">20 minutes</option>
+                <option value="15">15 minutes</option>
+                <option value="1">1 minute (Test Mode)</option>
+              </select>
+            </div>
+            <div class="config-field">
+              <label>Intra-Email Delay:</label>
+              <span class="pill-info">2 - 5s Random</span>
+            </div>
+          </div>
+
+          <div class="action-row">
+            <button id="startCampaignBtn" class="btn-primary">
+              <span class="btn-icon-text">🚀</span>
+              <span id="campaignBtnLabel">Start Autopilot Campaign (13 / 30m)</span>
+            </button>
+          </div>
+
+          <!-- Live Autopilot Status Deck (Shows when running or paused) -->
+          <div id="autopilotDeck" class="autopilot-deck hidden">
+            <div class="autopilot-header">
+              <span id="autopilotStatusBadge" class="autopilot-badge running">
+                <span class="pulse-dot"></span>
+                <span id="autopilotStatusText">Running Batch 1 of 142</span>
+              </span>
+              <div class="autopilot-actions">
+                <button id="pauseCampaignBtn" class="btn-tiny" title="Pause after current email">⏸️ Pause</button>
+                <button id="resumeCampaignBtn" class="btn-tiny btn-accent hidden" title="Resume or send immediately">▶️ Send Next Now</button>
+                <button id="stopCampaignBtn" class="btn-tiny btn-danger" title="Stop and cancel remaining queue">⏹️ Stop</button>
+              </div>
+            </div>
+
+            <div id="countdownContainer" class="countdown-container hidden">
+              <div class="countdown-label">Next Batch Scheduled In:</div>
+              <div id="countdownTimer" class="countdown-clock">29:59</div>
+              <div class="countdown-sub">Domain pre-check will scan next 13 recipients</div>
+            </div>
+
+            <div class="autopilot-metric-bar">
+              <div class="metric-item">
+                <span class="metric-val" id="metricSent">0</span>
+                <span class="metric-lbl">Delivered</span>
+              </div>
+              <div class="metric-item">
+                <span class="metric-val" id="metricRemaining">0</span>
+                <span class="metric-lbl">In Queue</span>
+              </div>
+              <div class="metric-item">
+                <span class="metric-val text-warning" id="metricSkipped">0</span>
+                <span class="metric-lbl">Dead Domain (Skipped)</span>
+              </div>
+              <div class="metric-item">
+                <span class="metric-val text-danger" id="metricFailed">0</span>
+                <span class="metric-lbl">Failed</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- RIGHT COLUMN: HR Recipients & Batch Manager -->
+      <section class="panel recipients-panel">
+        <div class="panel-header">
+          <h2>2. HR Email Contacts & List</h2>
+          <span class="badge-accent">Step 2</span>
+        </div>
+
+        <!-- Tabs: Manual / Extracted List -->
+        <div class="tabs-nav">
+          <button class="tab-btn active" data-tab="extractedTab">Extracted HR List (<span id="savedCountBadge">0</span> Remaining)</button>
+          <button class="tab-btn" data-tab="manualTab">Manual Raw Emails</button>
+          <button class="tab-btn" data-tab="importPdfTab">📂 Upload HR PDF / Docs</button>
+        </div>
+
+        <!-- TAB 1: Extracted & Saved HR Database -->
+        <div class="tab-content active" id="extractedTab">
+          <div class="search-filter-bar">
+            <div class="search-wrapper">
+              <span class="search-icon">🔍</span>
+              <input type="text" id="contactSearchInput" placeholder="Filter by company, recruiter name, or title...">
+            </div>
+            <div class="batch-quick-picks">
+              <button class="btn-tiny" id="selectFirst10Btn" title="Warm-up batch">Select Top 10 (Warmup)</button>
+              <button class="btn-tiny" id="selectFirst50Btn" title="Ideal daily quota size">Select Top 50</button>
+              <button class="btn-tiny" id="selectFirst100Btn">Select Top 100</button>
+              <button class="btn-tiny" id="selectAllFilteredBtn">Select All</button>
+              <button class="btn-tiny btn-subtle" id="clearSelectionBtn">Clear</button>
+            </div>
+          </div>
+
+          <div class="quota-warning-banner">
+            <span class="warn-icon">🛡️</span>
+            <span>Gmail personal sending limit is <strong>500 emails / 24h</strong>. Our Autopilot sends <strong>13 emails every 30 mins</strong> with DNS pre-checks to keep your account 100% safe.</span>
+          </div>
+
+          <!-- Contact Status Filter Chips (Default: In Queue Remaining) -->
+          <div class="status-filter-row">
+            <button type="button" class="filter-chip chip-pending active" data-status-filter="pending" id="filterPendingBtn">
+              <span>⏳ In Queue (Remaining)</span>
+              <span class="chip-badge" id="chipPendingCount">0</span>
+            </button>
+            <button type="button" class="filter-chip chip-sent" data-status-filter="sent" id="filterSentBtn">
+              <span>✅ Sent</span>
+              <span class="chip-badge" id="chipSentCount">0</span>
+            </button>
+            <button type="button" class="filter-chip chip-skipped" data-status-filter="skipped" id="filterSkippedBtn">
+              <span>🚫 Skipped (Deactivated)</span>
+              <span class="chip-badge" id="chipSkippedCount">0</span>
+            </button>
+            <button type="button" class="filter-chip" data-status-filter="all" id="filterAllBtn">
+              <span>📂 All Database</span>
+              <span class="chip-badge" id="chipAllCount">0</span>
+            </button>
+          </div>
+
+          <div class="contacts-table-container">
+            <table class="contacts-table">
+              <thead>
+                <tr>
+                  <th width="36"><input type="checkbox" id="masterCheckbox"></th>
+                  <th width="120">Status</th>
+                  <th>Recruiter Name</th>
+                  <th>Email Address</th>
+                  <th>Company</th>
+                  <th>Title</th>
+                </tr>
+              </thead>
+              <tbody id="contactsTableBody">
+                <tr>
+                  <td colspan="6" class="empty-state">Loading HR contacts...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="selection-summary-bar">
+            <span>Selected: <strong id="selectedContactCount">0</strong> HR contacts</span>
+            <button id="transferToManualBtn" class="btn-link-action">Copy selected to Manual Textarea ➔</button>
+          </div>
+        </div>
+
+        <!-- TAB 2: Manual Raw Textarea -->
+        <div class="tab-content" id="manualTab">
+          <div class="manual-info">
+            <p>Paste email addresses separated by <strong>commas</strong> or <strong>new lines</strong>. You can mix raw emails and names.</p>
+          </div>
+          <div class="form-group">
+            <div class="textarea-header">
+              <label for="manualEmails">HR Recipient List</label>
+              <span class="valid-count-pill">Detected: <strong id="manualDetectedCount">0</strong> emails</span>
+            </div>
+            <textarea id="manualEmails" rows="12" placeholder="e.g.&#10;recruiter@company.com&#10;hr.lead@startup.io, talent@enterprise.com"></textarea>
+          </div>
+          <div class="manual-actions">
+            <button id="cleanManualBtn" class="btn-tiny">Clean & Deduplicate</button>
+            <button id="saveManualToDbBtn" class="btn-tiny btn-subtle">Save to HR Contacts List</button>
+          </div>
+        </div>
+
+        <!-- TAB 3: Import / Drop HR PDF Document -->
+        <div class="tab-content" id="importPdfTab">
+          <div class="pdf-importer-box">
+            <div class="import-instructions">
+              <h3>Upload Any HR Contacts PDF</h3>
+              <p>Got a new recruiter list or updated 21-page PDF? Drop it here. The backend automatically parses all email addresses, recruiter names, and companies with regex precision.</p>
+            </div>
+            <div id="hrPdfDropzone" class="dropzone">
+              <input type="file" id="hrPdfInput" accept=".pdf,application/pdf" hidden>
+              <div class="dropzone-empty" id="hrPdfDropEmpty">
+                <div class="dropzone-icon">📥</div>
+                <p class="dropzone-title">Drag & drop HR Contact List PDF here</p>
+                <p class="dropzone-subtitle">or <button type="button" class="btn-link" id="browseHrPdfBtn">choose PDF file</button></p>
+              </div>
+              <div class="dropzone-filled hidden" id="hrPdfDropFilled">
+                <div class="file-info">
+                  <span class="file-icon">📊</span>
+                  <div class="file-name" id="hrPdfNameDisplay">Contacts.pdf</div>
+                </div>
+              </div>
+            </div>
+            <div class="import-status-area hidden" id="importStatusArea">
+              <div class="spinner"></div>
+              <span id="importStatusText">Parsing document and extracting contacts...</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- PROGRESS & LIVE RESULTS SECTION -->
+        <div class="results-section" id="resultsSection">
+          <div class="results-header">
+            <h3>Dispatch Progress & Log</h3>
+            <div class="results-stats">
+              <span class="stat-tag sent">Sent: <strong id="statSent">0</strong></span>
+              <span class="stat-tag failed">Failed: <strong id="statFailed">0</strong></span>
+              <span class="stat-tag total">Total: <strong id="statTotal">0</strong></span>
+            </div>
+          </div>
+
+          <!-- Progress Bar -->
+          <div class="progress-bar-track hidden" id="progressBarTrack">
+            <div class="progress-bar-fill" id="progressBarFill" style="width: 0%;"></div>
+          </div>
+
+          <!-- Results List / Log Output -->
+          <div class="results-scroll-container">
+            <div id="resultsLog" class="results-log">
+              <div class="placeholder-log">Ready to send. Results will stream here in real-time.</div>
+            </div>
+          </div>
+
+          <div class="results-footer">
+            <button id="exportResultsBtn" class="btn-tiny" disabled>Export Log (JSON)</button>
+            <button id="clearResultsBtn" class="btn-tiny btn-subtle">Clear Log</button>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Notification Toast -->
+  <div id="toast" class="toast hidden"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>

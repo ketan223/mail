@@ -1,0 +1,18 @@
+{
+  "status": "waiting_pause",
+  "batchSize": 13,
+  "pauseDurationMs": 1800000,
+  "currentBatchNumber": 6,
+  "sentInCurrentBatch": 13,
+  "totalBatches": 141,
+  "nextBatchRunTime": 1788666847985,
+  "stats": {
+    "totalQueued": 1826,
+    "sent": 75,
+    "failed": 1,
+    "skippedMx": 114
+  },
+  "senderName": "Ketan Tiwari",
+  "subject": "Application: Software & AI Engineer - Ketan Tiwari - {{company}}",
+  "message": "Dear {{name}},\n\nI hope you are doing well. I am writing to express my strong interest in software engineering and AI roles at {{company}}.\n\nI am a Full-Stack Engineer specializing in Generative AI, Agentic workflows, and Machine Learning—experienced in building end-to-end architectures from LLM/RAG pipelines to scalable backend APIs and user interfaces.\n\nPlease find my resume attached for your review. I would welcome the opportunity for a brief conversation to discuss how my skillset aligns with {{company}}'s current goals.\n\nThank you for your time and consideration.\n\nBest regards,\nKetan Tiwari\ntiwariketan045@gmail.com"
+}
