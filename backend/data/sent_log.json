@@ -1374,5 +1374,69 @@
     "status": "sent",
     "messageId": "<5ba66245-821c-6a06-94c4-caa0630f6e65@gmail.com>",
     "timestamp": "2026-09-06T03:24:07.982Z"
+  },
+  {
+    "email": "arunima.bhushan@orcapodservices.com",
+    "name": "Arunima Bhushan",
+    "company": "Orcapodservices",
+    "status": "skipped_invalid_domain",
+    "error": "HR Mailbox does not exist / Deactivated (550 5.1.1)",
+    "timestamp": "2026-09-06T03:55:04.571Z"
+  },
+  {
+    "email": "barkha@trellissoft.ai",
+    "name": "Barkha Dave",
+    "company": "of HR & Operations Compliance Trellissoft",
+    "status": "skipped_invalid_domain",
+    "error": "HR Mailbox does not exist / Deactivated (550 5.1.1)",
+    "timestamp": "2026-09-06T03:55:05.081Z"
+  },
+  {
+    "email": "barkha@wobot.ai",
+    "name": "Barkha Sharma",
+    "company": "Wobot",
+    "status": "skipped_invalid_domain",
+    "error": "HR Mailbox does not exist / Deactivated (550 5.1.1)",
+    "timestamp": "2026-09-06T03:55:05.516Z"
+  },
+  {
+    "email": "basava@kamivision.com",
+    "name": "Basava",
+    "company": "Vision",
+    "status": "sent",
+    "messageId": "<750f6cf9-5b89-7f69-3827-6995b0bfb045@gmail.com>",
+    "timestamp": "2026-09-06T03:55:15.081Z"
+  },
+  {
+    "email": "batool.ali@electriphi.ai",
+    "name": "Batool Ali",
+    "company": "Charging",
+    "status": "skipped_invalid_domain",
+    "error": "Domain has no active MX records",
+    "timestamp": "2026-09-06T03:55:20.114Z"
+  },
+  {
+    "email": "bedisha@reward360.co",
+    "name": "Bedisha Karmakar",
+    "company": "Reward360",
+    "status": "skipped_invalid_domain",
+    "error": "HR Mailbox does not exist / Deactivated (550 5.1.1)",
+    "timestamp": "2026-09-06T03:55:20.521Z"
+  },
+  {
+    "email": "benoy.koshy@sisainfosec.com",
+    "name": "Benoy Koshy",
+    "company": "of Talent Acquisition SISA",
+    "status": "skipped_invalid_domain",
+    "error": "HR Mailbox does not exist / Deactivated (550 5.1.1)",
+    "timestamp": "2026-09-06T03:55:20.738Z"
+  },
+  {
+    "email": "bensely.zachariah@fulcrumdigital.com",
+    "name": "Bensely Zachariah",
+    "company": "of Human Resources Fulcrum Digital Inc",
+    "status": "skipped_invalid_domain",
+    "error": "HR Mailbox does not exist / Deactivated (550 5.1.1)",
+    "timestamp": "2026-09-06T03:55:21.172Z"
   }
 ]

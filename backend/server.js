@@ -215,7 +215,7 @@ const getRandomDelay = (minMs = 2000, maxMs = 5000) => {
 class CampaignEngine {
   constructor() {
     this.status = 'idle'; // 'idle', 'running_batch', 'waiting_pause', 'paused', 'completed'
-    this.batchSize = 13;
+    this.batchSize = 15;
     this.pauseDurationMs = 30 * 60 * 1000; // 30 minutes
     this.activePayload = null; // { resume: { filename, buffer }, senderName, subject, message }
     this.queue = [];
@@ -274,7 +274,7 @@ class CampaignEngine {
   }
 
   // Start Campaign
-  start(payload, recipientsList, batchSize = 13, pauseMinutes = 30) {
+  start(payload, recipientsList, batchSize = 15, pauseMinutes = 30) {
     if (this.status === 'running_batch' || this.status === 'waiting_pause') {
       throw new Error('A campaign is already actively running. Pause or stop it first.');
     }
@@ -297,7 +297,7 @@ class CampaignEngine {
 
     this.activePayload = payload;
     this.queue = unsentList;
-    this.batchSize = parseInt(batchSize, 10) || 13;
+    this.batchSize = parseInt(batchSize, 10) || 15;
     this.pauseDurationMs = (parseInt(pauseMinutes, 10) || 30) * 60 * 1000;
     this.currentBatchNumber = 0;
     this.totalBatches = Math.ceil(this.queue.length / this.batchSize);
@@ -539,7 +539,7 @@ class CampaignEngine {
               message: saved.message || ''
             };
             this.queue = unsent;
-            this.batchSize = saved.batchSize || 13;
+            this.batchSize = saved.batchSize || 15;
             this.pauseDurationMs = saved.pauseDurationMs || 30 * 60 * 1000;
             this.currentBatchNumber = saved.currentBatchNumber || 2;
             this.totalBatches = Math.ceil(this.queue.length / this.batchSize) + this.currentBatchNumber;
@@ -793,7 +793,7 @@ app.post('/api/campaign/start', upload.single('resume'), (req, res) => {
     const senderName = (req.body.senderName || req.body.name || '').trim();
     const subject = (req.body.subject || '').trim();
     const message = (req.body.message || '').trim();
-    const batchSize = parseInt(req.body.batchSize, 10) || 13;
+    const batchSize = parseInt(req.body.batchSize, 10) || 15;
     const pauseMinutes = parseInt(req.body.pauseMinutes, 10) || 30;
 
     if (!subject) return res.status(400).json({ error: 'Subject line is required.' });

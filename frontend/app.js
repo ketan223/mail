@@ -691,7 +691,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     selectedContactCount.textContent = selectedContactEmails.size;
-    const batchSize = batchSizeInput.value || 13;
+    const batchSize = batchSizeInput.value || 15;
     const pauseMins = pauseMinutesInput.value || 30;
     campaignBtnLabel.textContent = `Start Autopilot Campaign (${count} remaining / ${batchSize} per ${pauseMins}m)`;
   }
@@ -712,7 +712,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const senderName = senderNameInput.value.trim();
     const subject = emailSubjectInput.value.trim();
     const message = emailMessageInput.value.trim();
-    const batchSize = parseInt(batchSizeInput.value, 10) || 13;
+    const batchSize = parseInt(batchSizeInput.value, 10) || 15;
     const pauseMinutes = parseInt(pauseMinutesInput.value, 10) || 30;
 
     if (!subject) {
@@ -866,13 +866,14 @@ document.addEventListener('DOMContentLoaded', () => {
     autopilotStatusBadge.className = `autopilot-badge ${status.status}`;
     if (status.status === 'running_batch') {
       const current = status.sentInCurrentBatch || 0;
-      const target = status.batchSize || 13;
+      const target = status.batchSize || 15;
       autopilotStatusText.textContent = `Batch ${status.currentBatch}/${status.totalBatches}: Sent ${current}/${target} (Resting 30m after ${target})...`;
       pauseCampaignBtn.classList.remove('hidden');
       resumeCampaignBtn.classList.add('hidden');
       countdownContainer.classList.add('hidden');
     } else if (status.status === 'waiting_pause') {
-      autopilotStatusText.textContent = `Batch ${status.currentBatch} Done (13 sent)! Resting 30 mins...`;
+      const bSize = status.batchSize || 15;
+      autopilotStatusText.textContent = `Batch ${status.currentBatch} Done (${bSize} sent)! Resting 30 mins...`;
       pauseCampaignBtn.classList.remove('hidden');
       resumeCampaignBtn.classList.remove('hidden');
       countdownContainer.classList.remove('hidden');
