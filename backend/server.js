@@ -5,6 +5,7 @@ const nodemailer = require('nodemailer');
 const path = require('path');
 const fs = require('fs');
 const net = require('net');
+const tls = require('tls');
 const dns = require('dns').promises;
 require('dns').setServers(['8.8.8.8', '1.1.1.1', '8.8.4.4']);
 const pdfParse = require('pdf-parse');
@@ -776,6 +777,172 @@ app.post('/api/clean-bounces', (req, res) => {
     });
   } catch (err) {
     res.status(500).json({ error: 'Failed to clean bounces: ' + err.message });
+  }
+});
+
+// Automatic IMAP Scanner to detect and clean all bounces from Gmail Inbox directly
+function autoCleanGmailBounces() {
+  return new Promise((resolve, reject) => {
+    const user = process.env.GMAIL_USER;
+    const pass = (process.env.GMAIL_APP_PASSWORD || '').replace(/\s+/g, '');
+    if (!user || !pass) return reject(new Error('Gmail credentials not configured in backend/.env'));
+
+    const socket = tls.connect(993, 'imap.gmail.com', { rejectUnauthorized: false });
+    socket.setEncoding('utf8');
+
+    let buffer = '';
+    let isDone = false;
+    const detectedBounces = new Set();
+    let messageIds = [];
+    let currentIdx = 0;
+    let step = 'WAIT_GREETING';
+
+    const hardTimer = setTimeout(() => {
+      if (!isDone) {
+        isDone = true;
+        try { socket.destroy(); } catch (e) {}
+        finishClean();
+      }
+    }, 15000);
+
+    function finishClean() {
+      if (isDone) return;
+      isDone = true;
+      clearTimeout(hardTimer);
+      try { socket.write('X LOGOUT\r\n'); } catch (e) {}
+      try { socket.destroy(); } catch (e) {}
+
+      // Update sent_log.json with all detected bounces
+      const bounceList = Array.from(detectedBounces);
+      let history = [];
+      try {
+        if (fs.existsSync(SENT_LOG_FILE)) {
+          history = JSON.parse(fs.readFileSync(SENT_LOG_FILE, 'utf8') || '[]');
+        }
+      } catch (e) {}
+
+      let updatedCount = 0;
+      bounceList.forEach(bEmail => {
+        const clean = bEmail.toLowerCase().trim();
+        const idx = history.findIndex(h => (h.email || '').toLowerCase().trim() === clean);
+        if (idx >= 0) {
+          history[idx].status = 'skipped_invalid_domain';
+          history[idx].error = 'Bounced: Address not found / Deactivated (550 5.1.1) [Auto-synced from Gmail]';
+          history[idx].bouncedAt = new Date().toISOString();
+          updatedCount++;
+        } else {
+          history.push({
+            email: clean,
+            status: 'skipped_invalid_domain',
+            error: 'Bounced: Address not found / Deactivated (550 5.1.1) [Auto-synced from Gmail]',
+            timestamp: new Date().toISOString()
+          });
+          updatedCount++;
+        }
+      });
+
+      try {
+        fs.writeFileSync(SENT_LOG_FILE, JSON.stringify(history, null, 2), 'utf8');
+        if (fs.existsSync(CAMPAIGN_STATE_FILE)) {
+          const state = JSON.parse(fs.readFileSync(CAMPAIGN_STATE_FILE, 'utf8') || '{}');
+          if (state.stats) {
+            state.stats.sent = history.filter(h => h.status === 'sent').length;
+            state.stats.skippedMx = history.filter(h => h.status === 'skipped_invalid_domain').length;
+            fs.writeFileSync(CAMPAIGN_STATE_FILE, JSON.stringify(state, null, 2), 'utf8');
+          }
+        }
+      } catch (e) {}
+
+      resolve({
+        totalFound: bounceList.length,
+        updatedCount: updatedCount,
+        bouncedEmails: bounceList
+      });
+    }
+
+    socket.on('data', (chunk) => {
+      buffer += chunk;
+
+      if (step === 'WAIT_GREETING' && buffer.includes('* OK')) {
+        buffer = '';
+        step = 'LOGGING_IN';
+        socket.write(`A1 LOGIN "${user}" "${pass}"\r\n`);
+      } else if (step === 'LOGGING_IN' && buffer.includes('A1 ')) {
+        if (!buffer.includes('A1 OK')) {
+          return finishClean();
+        }
+        buffer = '';
+        step = 'SELECTING';
+        socket.write('A2 SELECT INBOX\r\n');
+      } else if (step === 'SELECTING' && buffer.includes('A2 ')) {
+        if (!buffer.includes('A2 OK')) {
+          return finishClean();
+        }
+        buffer = '';
+        step = 'SEARCHING';
+        socket.write('A3 SEARCH FROM "mailer-daemon@googlemail.com"\r\n');
+      } else if (step === 'SEARCHING' && buffer.includes('A3 ')) {
+        const match = buffer.match(/\* SEARCH ([\d\s]+)/);
+        buffer = '';
+        if (match && match[1].trim()) {
+          messageIds = match[1].trim().split(/\s+/).map(Number).filter(Boolean);
+          if (messageIds.length > 50) messageIds = messageIds.slice(-50);
+          if (messageIds.length > 0) {
+            step = 'FETCHING';
+            currentIdx = 0;
+            socket.write(`F${currentIdx} FETCH ${messageIds[currentIdx]} BODY[TEXT]\r\n`);
+          } else {
+            finishClean();
+          }
+        } else {
+          finishClean();
+        }
+      } else if (step === 'FETCHING') {
+        const tag = `F${currentIdx} `;
+        if (buffer.includes(tag)) {
+          const p1 = /wasn['’]t delivered to\s+([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/i;
+          const p2 = /Final-Recipient:\s*rfc822;\s*([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/i;
+          const m1 = buffer.match(p1);
+          const m2 = buffer.match(p2);
+          if (m1) detectedBounces.add(m1[1].toLowerCase().trim());
+          if (m2) detectedBounces.add(m2[1].toLowerCase().trim());
+
+          if (!m1 && !m2) {
+            const allEmails = buffer.match(/([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/gi) || [];
+            allEmails.forEach(e => {
+              const c = e.toLowerCase().trim();
+              if (c !== user.toLowerCase() && !c.includes('googlemail.com') && !c.includes('google.com') && !c.includes('gmail.com')) {
+                detectedBounces.add(c);
+              }
+            });
+          }
+
+          buffer = '';
+          currentIdx++;
+          if (currentIdx < messageIds.length) {
+            socket.write(`F${currentIdx} FETCH ${messageIds[currentIdx]} BODY[TEXT]\r\n`);
+          } else {
+            finishClean();
+          }
+        }
+      }
+    });
+
+    socket.on('error', () => finishClean());
+  });
+}
+
+// 1-Click Auto-Scan Endpoint
+app.post('/api/auto-sync-gmail-bounces', async (req, res) => {
+  try {
+    const result = await autoCleanGmailBounces();
+    res.json({
+      success: true,
+      message: `Cleaned ${result.updatedCount} bounced email(s) directly from your Gmail Inbox!`,
+      result
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Auto-sync failed: ' + err.message });
   }
 });
 

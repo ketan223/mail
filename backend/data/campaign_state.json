@@ -1,18 +1,18 @@
 {
-  "status": "paused",
+  "status": "running_batch",
   "batchSize": 15,
   "pauseDurationMs": 1800000,
-  "currentBatchNumber": 10,
-  "sentInCurrentBatch": 15,
-  "totalBatches": 118,
+  "currentBatchNumber": 2,
+  "sentInCurrentBatch": 12,
+  "totalBatches": 99,
   "nextBatchRunTime": null,
   "stats": {
-    "totalQueued": 1826,
-    "sent": 139,
+    "totalQueued": 1528,
+    "sent": 25,
     "failed": 0,
-    "skippedMx": 176
+    "skippedMx": 82
   },
   "senderName": "Ketan Tiwari",
   "subject": "Application: Software & AI Engineer - Ketan Tiwari - {{company}}",
-  "message": "Dear {{name}},\n\nI hope you are doing well. I am writing to express my strong interest in software engineering and AI roles at {{company}}.\n\nI am a Full-Stack Engineer specializing in Generative AI, Agentic workflows, and Machine Learning—experienced in building end-to-end architectures from LLM/RAG pipelines to scalable backend APIs and user interfaces.\n\nPlease find my resume attached for your review. I would welcome the opportunity for a brief conversation to discuss how my skillset aligns with {{company}}'s current goals.\n\nThank you for your time and consideration.\n\nBest regards,\nKetan Tiwari\ntiwariketan045@gmail.com"
+  "message": "Dear {{name}},\r\n\r\nI hope you are doing well. I am writing to express my strong interest in software engineering and AI roles at {{company}}.\r\n\r\nI am a Full-Stack Engineer specializing in Generative AI, Agentic workflows, and Machine Learning—experienced in building end-to-end architectures from LLM/RAG pipelines to scalable backend APIs and user interfaces.\r\n\r\nPlease find my resume attached for your review. I would welcome the opportunity for a brief conversation to discuss how my skillset aligns with {{company}}'s current goals.\r\n\r\nThank you for your time and consideration.\r\n\r\nBest regards,\r\nKetan Tiwari\r\ntiwariketan045@gmail.com"
 }

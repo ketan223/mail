@@ -1005,68 +1005,6 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // -------------------------------------------------------------
-  // 10. Bounce Cleaner Handler
-  // -------------------------------------------------------------
-  const toggleBounceBoxBtn = document.getElementById('toggleBounceBoxBtn');
-  const bounceCleanerBody = document.getElementById('bounceCleanerBody');
-  const bounceToggleArrow = document.getElementById('bounceToggleArrow');
-  const bounceTextInput = document.getElementById('bounceTextInput');
-  const submitCleanBouncesBtn = document.getElementById('submitCleanBouncesBtn');
-  const cleanBouncesStatus = document.getElementById('cleanBouncesStatus');
-
-  if (toggleBounceBoxBtn && bounceCleanerBody) {
-    toggleBounceBoxBtn.addEventListener('click', (e) => {
-      if (e.target.tagName === 'TEXTAREA' || e.target.id === 'submitCleanBouncesBtn') return;
-      const isHidden = bounceCleanerBody.classList.contains('hidden');
-      if (isHidden) {
-        bounceCleanerBody.classList.remove('hidden');
-        if (bounceToggleArrow) bounceToggleArrow.textContent = '▲ Close';
-      } else {
-        bounceCleanerBody.classList.add('hidden');
-        if (bounceToggleArrow) bounceToggleArrow.textContent = '▼ Paste Bounces';
-      }
-    });
-  }
-
-  if (submitCleanBouncesBtn && bounceTextInput) {
-    submitCleanBouncesBtn.addEventListener('click', async () => {
-      const text = bounceTextInput.value.trim();
-      if (!text) {
-        showToast('Please paste the bounce failure text or emails first.', 'error');
-        return;
-      }
-
-      submitCleanBouncesBtn.disabled = true;
-      submitCleanBouncesBtn.textContent = 'Cleaning...';
-      if (cleanBouncesStatus) cleanBouncesStatus.textContent = 'Processing...';
-
-      try {
-        const res = await fetch(`${API_BASE}/api/clean-bounces`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text })
-        });
-        const data = await res.json();
-        if (data.success) {
-          showToast(data.message, 'success');
-          bounceTextInput.value = '';
-          if (cleanBouncesStatus) cleanBouncesStatus.textContent = `Cleaned ${data.cleanedEmails.length} email(s)!`;
-          await loadHistory();
-          applyFilter();
-        } else {
-          showToast(data.error || 'Failed to clean bounces', 'error');
-          if (cleanBouncesStatus) cleanBouncesStatus.textContent = '';
-        }
-      } catch (err) {
-        showToast('Error: ' + err.message, 'error');
-      } finally {
-        submitCleanBouncesBtn.disabled = false;
-        submitCleanBouncesBtn.textContent = 'Clean Bounced Emails Now';
-      }
-    });
-  }
-
-  // -------------------------------------------------------------
   // Initial Boot
   // -------------------------------------------------------------
   verifySmtpConnection();
