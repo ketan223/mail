@@ -165,9 +165,9 @@ async function verifyMailboxExists(email) {
         resolve(res);
       };
 
-      // Strict 3.5s hard timeout for connect + handshake
+      // Zero-Tolerance Strict Mode: ONLY send if server EXPLICITLY confirmed 250 OK
       const hardTimer = setTimeout(() => {
-        finish({ valid: true, reason: 'Probe timeout (fallback to send)' });
+        finish({ valid: false, reason: 'Strict Mode: Mailbox unconfirmed (Timeout/Firewalled)' });
       }, 3500);
 
       try {
@@ -192,27 +192,27 @@ async function verifyMailboxExists(email) {
             } else if (line.startsWith('250') || line.startsWith('251')) {
               finish({ valid: true, reason: 'Mailbox verified active (250 OK)' });
             } else {
-              finish({ valid: true, reason: 'Ambiguous response / Catch-all' });
+              finish({ valid: false, reason: 'Strict Mode: Ambiguous server response (Rejected for safety)' });
             }
           }
         });
 
         socket.on('error', (err) => {
-          finish({ valid: true, reason: `Probe unconnectable: ${err.message}` });
+          finish({ valid: false, reason: `Strict Mode: Cannot verify (${err.message})` });
         });
 
         socket.on('timeout', () => {
-          finish({ valid: true, reason: 'Probe timeout' });
+          finish({ valid: false, reason: 'Strict Mode: Probe timeout' });
         });
       } catch (err) {
-        finish({ valid: true, reason: `Socket error: ${err.message}` });
+        finish({ valid: false, reason: `Strict Mode: Socket error (${err.message})` });
       }
     });
 
     mailboxCache.set(trimmedEmail, probeResult);
     return probeResult;
   } catch (err) {
-    return { valid: true, reason: 'Verification bypassed: ' + err.message };
+    return { valid: false, reason: 'Strict Mode: Verification error: ' + err.message };
   }
 }
 
@@ -713,6 +713,69 @@ app.get('/api/history', (req, res) => {
     res.json({ total: history.length, history });
   } catch (err) {
     res.status(500).json({ error: 'Failed to read sent history: ' + err.message });
+  }
+});
+
+// Clean bounced emails (from pasted Gmail failure text or email list)
+app.post('/api/clean-bounces', (req, res) => {
+  try {
+    const rawText = req.body.text || req.body.bouncedEmails || '';
+    const inlineEmailRegex = /([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/gi;
+    const matches = rawText.match(inlineEmailRegex) || [];
+    
+    // Ignore sender's own email and Google system addresses
+    const cleanList = Array.from(new Set(matches.map(e => e.toLowerCase().trim())))
+      .filter(e => e !== (process.env.GMAIL_USER || '').toLowerCase().trim() && !e.includes('googlemail.com') && !e.includes('gmail.com'));
+
+    if (cleanList.length === 0) {
+      return res.status(400).json({ error: 'No recipient email addresses found in the provided text.' });
+    }
+
+    let history = [];
+    if (fs.existsSync(SENT_LOG_FILE)) {
+      history = JSON.parse(fs.readFileSync(SENT_LOG_FILE, 'utf8') || '[]');
+    }
+
+    let cleanedCount = 0;
+    cleanList.forEach(bouncedEmail => {
+      const idx = history.findIndex(h => (h.email || '').toLowerCase().trim() === bouncedEmail);
+      if (idx >= 0) {
+        history[idx].status = 'skipped_invalid_domain';
+        history[idx].error = 'Bounced: Address not found / Deactivated (550 5.1.1)';
+        history[idx].bouncedAt = new Date().toISOString();
+        cleanedCount++;
+      } else {
+        history.push({
+          email: bouncedEmail,
+          status: 'skipped_invalid_domain',
+          error: 'Bounced: Address not found / Deactivated (550 5.1.1)',
+          timestamp: new Date().toISOString()
+        });
+        cleanedCount++;
+      }
+    });
+
+    fs.writeFileSync(SENT_LOG_FILE, JSON.stringify(history, null, 2), 'utf8');
+
+    // Update campaign_state stats
+    if (fs.existsSync(CAMPAIGN_STATE_FILE)) {
+      try {
+        const state = JSON.parse(fs.readFileSync(CAMPAIGN_STATE_FILE, 'utf8') || '{}');
+        if (state.stats) {
+          state.stats.sent = history.filter(h => h.status === 'sent').length;
+          state.stats.skippedMx = history.filter(h => h.status === 'skipped_invalid_domain').length;
+          fs.writeFileSync(CAMPAIGN_STATE_FILE, JSON.stringify(state, null, 2), 'utf8');
+        }
+      } catch (e) {}
+    }
+
+    res.json({
+      success: true,
+      message: `Cleaned ${cleanedCount} bounced email(s) from database!`,
+      cleanedEmails: cleanList
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to clean bounces: ' + err.message });
   }
 });
 

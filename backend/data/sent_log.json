@@ -323,9 +323,10 @@
     "email": "anand.r@whatarage.com",
     "name": "Anand Rajendran",
     "company": "Whatarage",
-    "status": "sent",
-    "messageId": "<8e417232-5077-4f03-d300-340838ac8323@gmail.com>",
-    "timestamp": "2026-09-05T12:32:33.427Z"
+    "status": "skipped_invalid_domain",
+    "error": "Bounced: Address not found / Deactivated (550 5.1.1)",
+    "timestamp": "2026-09-06T10:55:00.000Z",
+    "bouncedAt": "2026-09-06T05:28:19.638Z"
   },
   {
     "email": "anand@hubilo.com",
@@ -1438,5 +1439,1086 @@
     "status": "skipped_invalid_domain",
     "error": "HR Mailbox does not exist / Deactivated (550 5.1.1)",
     "timestamp": "2026-09-06T03:55:21.172Z"
+  },
+  {
+    "email": "bensley.zachariah@fulcrumdigital.com",
+    "name": "Bensley Zachariah",
+    "company": "of Human Resources Fulcrum Digital Inc",
+    "status": "sent",
+    "messageId": "<33eb6dc9-93a5-3d62-b896-de8463276832@gmail.com>",
+    "timestamp": "2026-09-06T03:55:30.674Z"
+  },
+  {
+    "email": "benson.mendez@microobjects.net",
+    "name": "Benson Mendez",
+    "company": "Microobjects",
+    "status": "skipped_invalid_domain",
+    "error": "HR Mailbox does not exist / Deactivated (550 5.1.1)",
+    "timestamp": "2026-09-06T03:55:35.287Z"
+  },
+  {
+    "email": "bhakti.dharod@idfy.com",
+    "name": "Bhakti Dharod",
+    "company": "of HR IDfy",
+    "status": "sent",
+    "messageId": "<2ce8e03f-39d5-74a3-ee78-40faee57ff0b@gmail.com>",
+    "timestamp": "2026-09-06T03:55:44.812Z"
+  },
+  {
+    "email": "bharat.bhartia@workindia.in",
+    "name": "Bharat Bhartia",
+    "company": "of Talent Acquisition and HR WorkIndia",
+    "status": "sent",
+    "messageId": "<d0e924da-46a0-8534-d7bf-04b7ef2bfa88@gmail.com>",
+    "timestamp": "2026-09-06T03:55:56.075Z"
+  },
+  {
+    "email": "bharat@ka-nex.com",
+    "name": "Bharat Rao",
+    "company": "Ka-nex",
+    "status": "skipped_invalid_domain",
+    "error": "HR Mailbox does not exist / Deactivated (550 5.1.1)",
+    "timestamp": "2026-09-06T03:56:02.046Z"
+  },
+  {
+    "email": "bravipati@appstekcorp.com",
+    "name": "Bharathi Ravipati",
+    "company": "Appstekcorp",
+    "status": "skipped_invalid_domain",
+    "error": "HR Mailbox does not exist / Deactivated (550 5.1.1)",
+    "timestamp": "2026-09-06T03:56:02.321Z"
+  },
+  {
+    "email": "bhargavic@aissel.com",
+    "name": "Bhargavi Challa",
+    "company": "of Human Resources Aissel Technologies",
+    "status": "sent",
+    "messageId": "<ad89733c-edc9-6610-e217-59b33e4c5aec@gmail.com>",
+    "timestamp": "2026-09-06T04:00:44.536Z"
+  },
+  {
+    "email": "bharti.negi@edifecs.com",
+    "name": "Bharti Negi",
+    "company": "Edifecs",
+    "status": "sent",
+    "messageId": "<2d5ecf3f-21cd-f904-abd1-14ac9d87b22c@gmail.com>",
+    "timestamp": "2026-09-06T04:00:58.461Z"
+  },
+  {
+    "email": "bhavana@netcore.co.in",
+    "name": "Bhavana Jain",
+    "company": "Netcore",
+    "status": "skipped_invalid_domain",
+    "error": "HR Mailbox does not exist / Deactivated (550 5.1.1)",
+    "timestamp": "2026-09-06T04:01:03.857Z"
+  },
+  {
+    "email": "bkaklotar@diabsolut.com",
+    "name": "Bhavik Kaklotar",
+    "company": "Global Talent Acquisition Diabsolut Inc",
+    "status": "skipped_invalid_domain",
+    "error": "HR Mailbox does not exist / Deactivated (550 5.1.1)",
+    "timestamp": "2026-09-06T04:01:05.240Z"
+  },
+  {
+    "email": "bhavik@games2win.com",
+    "name": "Bhavik Shah",
+    "company": "Games2win",
+    "status": "skipped_invalid_domain",
+    "error": "HR Mailbox does not exist / Deactivated (550 5.1.1)",
+    "timestamp": "2026-09-06T04:01:06.538Z"
+  },
+  {
+    "email": "bhavika.sheth@itcgindia.com",
+    "name": "Bhavika Sheth",
+    "company": "Itcgindia",
+    "status": "skipped_invalid_domain",
+    "error": "HR Mailbox does not exist / Deactivated (550 5.1.1)",
+    "timestamp": "2026-09-06T04:01:07.779Z"
+  },
+  {
+    "email": "bhavin@mydukaan.io",
+    "name": "Bhavin Sanghavi",
+    "company": "Mydukaan",
+    "status": "sent",
+    "messageId": "<b60f8448-9f33-ed16-55f4-de5e384301be@gmail.com>",
+    "timestamp": "2026-09-06T04:01:17.247Z"
+  },
+  {
+    "email": "bhavya@supplywisdom.com",
+    "name": "Bhavya Shetty",
+    "company": "Talent Management Supply Wisdom",
+    "status": "skipped_invalid_domain",
+    "error": "HR Mailbox does not exist / Deactivated (550 5.1.1)",
+    "timestamp": "2026-09-06T04:01:22.218Z"
+  },
+  {
+    "email": "bhawna@weexcel.in",
+    "name": "Bhawna Suri",
+    "company": "Weexcel",
+    "status": "skipped_invalid_domain",
+    "error": "HR Mailbox does not exist / Deactivated (550 5.1.1)",
+    "timestamp": "2026-09-06T04:01:22.341Z"
+  },
+  {
+    "email": "bhupesh.wasmatkar@verse.in",
+    "name": "Bhupesh Wasmatkar",
+    "company": "Verse",
+    "status": "sent",
+    "messageId": "<c2b57165-f297-1bda-e623-b0e84b483036@gmail.com>",
+    "timestamp": "2026-09-06T04:01:33.789Z"
+  },
+  {
+    "email": "biju.v@inapp.com",
+    "name": "Biju Varghese",
+    "company": "| HR | InApp InApp",
+    "status": "sent",
+    "messageId": "<517bc8a2-02ec-f61c-b0ee-7df85639fc0f@gmail.com>",
+    "timestamp": "2026-09-06T04:01:47.518Z"
+  },
+  {
+    "email": "bikram.dash@tatwa.info",
+    "name": "Bikram Dash",
+    "company": "Tatwa",
+    "status": "sent",
+    "messageId": "<7bd37ace-8716-f5b7-59a6-3f4c84a5cbaa@gmail.com>",
+    "timestamp": "2026-09-06T04:02:01.347Z"
+  },
+  {
+    "email": "bindu.krishnan@ospyn.com",
+    "name": "Bindu Krishnan",
+    "company": "Ospyn",
+    "status": "sent",
+    "messageId": "<42efabe2-06ac-fba9-378b-75d3e5bdc4b1@gmail.com>",
+    "timestamp": "2026-09-06T04:02:14.646Z"
+  },
+  {
+    "email": "binoy.varghese@rgigroup.com",
+    "name": "Binoy Varghese",
+    "company": "(Human Resources) RGI Group",
+    "status": "skipped_invalid_domain",
+    "error": "HR Mailbox does not exist / Deactivated (550 5.1.1)",
+    "timestamp": "2026-09-06T04:02:21.096Z"
+  },
+  {
+    "email": "biplob.das@izmoltd.com",
+    "name": "Biplob Das",
+    "company": "izmo",
+    "status": "skipped_invalid_domain",
+    "error": "HR Mailbox does not exist / Deactivated (550 5.1.1)",
+    "timestamp": "2026-09-06T04:02:21.350Z"
+  },
+  {
+    "email": "birendra.rout@weavertec.com",
+    "name": "Birendra Rout",
+    "company": "Weavertec",
+    "status": "skipped_invalid_domain",
+    "error": "HR Mailbox does not exist / Deactivated (550 5.1.1)",
+    "timestamp": "2026-09-06T04:02:21.611Z"
+  },
+  {
+    "email": "bishnu.rai@iglobalservices.net",
+    "name": "Bishnu Rai",
+    "company": "Services",
+    "status": "skipped_invalid_domain",
+    "error": "HR Mailbox does not exist / Deactivated (550 5.1.1)",
+    "timestamp": "2026-09-06T04:02:22.940Z"
+  },
+  {
+    "email": "bosky.w@totalitglobal.com",
+    "name": "Bosky Wadhwa",
+    "company": "Totalitglobal",
+    "status": "skipped_invalid_domain",
+    "error": "HR Mailbox does not exist / Deactivated (550 5.1.1)",
+    "timestamp": "2026-09-06T04:02:23.184Z"
+  },
+  {
+    "email": "brij@claritusconsulting.com",
+    "name": "Brij Kishore",
+    "company": "Claritusconsulting",
+    "status": "skipped_invalid_domain",
+    "error": "HR Mailbox does not exist / Deactivated (550 5.1.1)",
+    "timestamp": "2026-09-06T04:02:23.369Z"
+  },
+  {
+    "email": "britto@xoxoday.com",
+    "name": "Britto Ambrose",
+    "company": "of People & Culture Xoxoday",
+    "status": "skipped_invalid_domain",
+    "error": "HR Mailbox does not exist / Deactivated (550 5.1.1)",
+    "timestamp": "2026-09-06T04:02:24.373Z"
+  },
+  {
+    "email": "bushra.mehdi@axeno.co",
+    "name": "Bushra Mehdi",
+    "company": "Axeno",
+    "status": "skipped_invalid_domain",
+    "error": "HR Mailbox does not exist / Deactivated (550 5.1.1)",
+    "timestamp": "2026-09-06T04:02:24.578Z"
+  },
+  {
+    "email": "byju@rdalabs.com",
+    "name": "Byju Valappil",
+    "company": "Rdalabs",
+    "status": "skipped_invalid_domain",
+    "error": "HR Mailbox does not exist / Deactivated (550 5.1.1)",
+    "timestamp": "2026-09-06T04:02:24.703Z"
+  },
+  {
+    "email": "capt.kansal@writerinformation.com",
+    "name": "Capt Kansal",
+    "company": "Safety Security Writer Information",
+    "status": "skipped_invalid_domain",
+    "error": "HR Mailbox does not exist / Deactivated (550 5.1.1)",
+    "timestamp": "2026-09-06T04:02:26.114Z"
+  },
+  {
+    "email": "celina.joseph@extentia.com",
+    "name": "Celina Joseph",
+    "company": "Extentia",
+    "status": "skipped_invalid_domain",
+    "error": "HR Mailbox does not exist / Deactivated (550 5.1.1)",
+    "timestamp": "2026-09-06T04:02:27.037Z"
+  },
+  {
+    "email": "chainsingh.rathore@thegatewaycorp.com",
+    "name": "Chainsingh Rathore",
+    "company": "Thegatewaycorp",
+    "status": "skipped_invalid_domain",
+    "error": "HR Mailbox does not exist / Deactivated (550 5.1.1)",
+    "timestamp": "2026-09-06T04:02:28.162Z"
+  },
+  {
+    "email": "cbhattacharya@inventive-it.com",
+    "name": "Chaitali Bhattacharya",
+    "company": "of Human Resources Inventive IT",
+    "status": "sent",
+    "messageId": "<057d9f03-55b2-cc21-be91-f10e6be66a7d@gmail.com>",
+    "timestamp": "2026-09-06T04:02:37.378Z"
+  },
+  {
+    "email": "cray@netwoven.com",
+    "name": "Chaitali Ray",
+    "company": "Netwoven",
+    "status": "skipped_invalid_domain",
+    "error": "HR Mailbox does not exist / Deactivated (550 5.1.1)",
+    "timestamp": "2026-09-06T04:02:43.009Z"
+  },
+  {
+    "email": "chaitanya.arikati@abjayon.com",
+    "name": "Chaitanya Arikati",
+    "company": "Abjayon",
+    "status": "skipped_invalid_domain",
+    "error": "HR Mailbox does not exist / Deactivated (550 5.1.1)",
+    "timestamp": "2026-09-06T04:02:43.234Z"
+  },
+  {
+    "email": "chaitanya.kanthi@smartims.com",
+    "name": "Chaitanya Kanthi",
+    "company": "Smartims",
+    "status": "skipped_invalid_domain",
+    "error": "HR Mailbox does not exist / Deactivated (550 5.1.1)",
+    "timestamp": "2026-09-06T04:02:44.237Z"
+  },
+  {
+    "email": "chaitanya.peeta@polygon.technology",
+    "name": "Chaitanya Peeta",
+    "company": "Polygon",
+    "status": "skipped_invalid_domain",
+    "error": "HR Mailbox does not exist / Deactivated (550 5.1.1)",
+    "timestamp": "2026-09-06T04:02:45.671Z"
+  },
+  {
+    "email": "chamola.hal@hal-dz.com",
+    "name": "Chamola Hal",
+    "company": "Hal-dz",
+    "status": "skipped_invalid_domain",
+    "error": "Domain has no active MX records",
+    "timestamp": "2026-09-06T04:02:45.686Z"
+  },
+  {
+    "email": "chanchal.chandiok@northgateps.com",
+    "name": "Chanchal Chandiok",
+    "company": "Northgateps",
+    "status": "skipped_invalid_domain",
+    "error": "HR Mailbox does not exist / Deactivated (550 5.1.1)",
+    "timestamp": "2026-09-06T04:02:46.797Z"
+  },
+  {
+    "email": "chandan@noida.interrasystems.com",
+    "name": "Chandan Gambhir",
+    "company": "Noida",
+    "status": "sent",
+    "messageId": "<3873d43a-e4ba-27b9-06f9-156aa28f2cdf@gmail.com>",
+    "timestamp": "2026-09-06T04:02:55.575Z"
+  },
+  {
+    "email": "chandan.kashyap@mysenseinc.com",
+    "name": "Chandan Thakur",
+    "company": "Mysenseinc",
+    "status": "sent",
+    "messageId": "<4306de64-5b10-a030-b298-3e3c5a1bcceb@gmail.com>",
+    "timestamp": "2026-09-06T04:03:08.711Z"
+  },
+  {
+    "email": "chandinid@saglobal.com",
+    "name": "Chandini Davies",
+    "company": "sa.global",
+    "status": "skipped_invalid_domain",
+    "error": "HR Mailbox does not exist / Deactivated (550 5.1.1)",
+    "timestamp": "2026-09-06T04:03:14.650Z"
+  },
+  {
+    "email": "chandini@moolya.com",
+    "name": "Chandini Mokthar",
+    "company": "Moolya",
+    "status": "sent",
+    "messageId": "<39b855bf-11ba-893b-b547-3015c215651b@gmail.com>",
+    "timestamp": "2026-09-06T04:03:24.605Z"
+  },
+  {
+    "email": "chandnic@lambdatest.com",
+    "name": "Chandni Chopra",
+    "company": "Lambdatest",
+    "status": "sent",
+    "messageId": "<80da83a1-e0bb-44f2-d58f-703e7b43b725@gmail.com>",
+    "timestamp": "2026-09-06T04:03:39.122Z"
+  },
+  {
+    "email": "chandniyadav@ucreate.co.in",
+    "name": "Chandni Yadav",
+    "company": "of Talent Acquisition Founder and Lightning",
+    "status": "skipped_invalid_domain",
+    "error": "Domain has no active MX records",
+    "timestamp": "2026-09-06T04:03:42.294Z"
+  },
+  {
+    "email": "chandra.prakash@innoverdigital.com",
+    "name": "Chandra Prakash",
+    "company": "of Talent Acquisition Innover Digital",
+    "status": "skipped_invalid_domain",
+    "error": "HR Mailbox does not exist / Deactivated (550 5.1.1)",
+    "timestamp": "2026-09-06T04:03:42.482Z"
+  },
+  {
+    "email": "chandra.ratra@navigaglobal.com",
+    "name": "Chandra Ratra",
+    "company": "Navigaglobal",
+    "status": "skipped_invalid_domain",
+    "error": "HR Mailbox does not exist / Deactivated (550 5.1.1)",
+    "timestamp": "2026-09-06T04:03:44.026Z"
+  },
+  {
+    "email": "chandra@srivensys.com",
+    "name": "Chandrakanth K",
+    "company": "of Recruiting Operations Sriven Systems",
+    "status": "skipped_invalid_domain",
+    "error": "HR Mailbox does not exist / Deactivated (550 5.1.1)",
+    "timestamp": "2026-09-06T04:03:46.132Z"
+  },
+  {
+    "email": "cgv@eclinicalsol.com",
+    "name": "Chandrasekhar Gv",
+    "company": "Eclinicalsol",
+    "status": "skipped_invalid_domain",
+    "error": "HR Mailbox does not exist / Deactivated (550 5.1.1)",
+    "timestamp": "2026-09-06T04:03:47.610Z"
+  },
+  {
+    "email": "chandrashekarr@softura.com",
+    "name": "Chandrashekar R",
+    "company": "of Human Resources Softura",
+    "status": "skipped_invalid_domain",
+    "error": "HR Mailbox does not exist / Deactivated (550 5.1.1)",
+    "timestamp": "2026-09-06T04:03:48.942Z"
+  },
+  {
+    "email": "chandresh.kumar@jagrannewmedia.com",
+    "name": "Chandresh Kumar",
+    "company": "Manager & Head ( Performance Advertising) Jagran New Media",
+    "status": "skipped_invalid_domain",
+    "error": "HR Mailbox does not exist / Deactivated (550 5.1.1)",
+    "timestamp": "2026-09-06T04:03:50.477Z"
+  },
+  {
+    "email": "charan@srinipharma.com",
+    "name": "Charan Singh",
+    "company": "/HR SRINI PHARMACEUTICALS",
+    "status": "skipped_invalid_domain",
+    "error": "HR Mailbox does not exist / Deactivated (550 5.1.1)",
+    "timestamp": "2026-09-06T04:03:52.832Z"
+  },
+  {
+    "email": "charles.t@palni.com",
+    "name": "Charles Timothy",
+    "company": "Palni",
+    "status": "skipped_invalid_domain",
+    "error": "HR Mailbox does not exist / Deactivated (550 5.1.1)",
+    "timestamp": "2026-09-06T04:03:55.001Z"
+  },
+  {
+    "email": "charmaine@streamoid.com",
+    "name": "Charmaine Pinto",
+    "company": "of Human Resources Streamoid",
+    "status": "skipped_invalid_domain",
+    "error": "HR Mailbox does not exist / Deactivated (550 5.1.1)",
+    "timestamp": "2026-09-06T04:03:55.295Z"
+  },
+  {
+    "email": "cheryl.anjelo@colortokens.com",
+    "name": "Cheryl Anjelo",
+    "company": "Colortokens",
+    "status": "skipped_invalid_domain",
+    "error": "HR Mailbox does not exist / Deactivated (550 5.1.1)",
+    "timestamp": "2026-09-06T04:03:56.827Z"
+  },
+  {
+    "email": "cverma@fcsltd.com",
+    "name": "Chetan Verma",
+    "company": "Fcsltd",
+    "status": "skipped_invalid_domain",
+    "error": "HR Mailbox does not exist / Deactivated (550 5.1.1)",
+    "timestamp": "2026-09-06T04:03:58.055Z"
+  },
+  {
+    "email": "chetna@gokwik.co",
+    "name": "Chetna Gogia",
+    "company": "Gokwik",
+    "status": "sent",
+    "messageId": "<f63310e9-14f9-116c-bf2c-c6a826ef6138@gmail.com>",
+    "timestamp": "2026-09-06T04:04:08.112Z"
+  },
+  {
+    "email": "chhavi.bhatnagar@acnovate.com",
+    "name": "Chhavi Bhatnagar",
+    "company": "Acnovate",
+    "status": "sent",
+    "messageId": "<27eb6662-a02c-17aa-b681-c1ee93f2de32@gmail.com>",
+    "timestamp": "2026-09-06T04:04:24.782Z"
+  },
+  {
+    "email": "chinmoy.roy@catalyst-us.com",
+    "name": "Chinmoy Roy",
+    "company": "Catalyst-us",
+    "status": "skipped_invalid_domain",
+    "error": "HR Mailbox does not exist / Deactivated (550 5.1.1)",
+    "timestamp": "2026-09-06T04:04:30.054Z"
+  },
+  {
+    "email": "b.chintan@introlligent.com",
+    "name": "Chintan Bhatt",
+    "company": "Introlligent",
+    "status": "sent",
+    "messageId": "<ebb0285c-bfff-2b47-d51b-8dad1ffb9a2c@gmail.com>",
+    "timestamp": "2026-09-06T04:04:39.950Z"
+  },
+  {
+    "email": "chirag.patel1@rangtech.com",
+    "name": "Chirag Patel",
+    "company": "Rangtech",
+    "status": "skipped_invalid_domain",
+    "error": "HR Mailbox does not exist / Deactivated (550 5.1.1)",
+    "timestamp": "2026-09-06T04:34:40.210Z"
+  },
+  {
+    "email": "chirag.shah@iflair.com",
+    "name": "Chirag Shah",
+    "company": "(HR & Admin) iFlair Web Technologies",
+    "status": "sent",
+    "messageId": "<643037d9-22e1-cf3e-f462-1f5731cd908f@gmail.com>",
+    "timestamp": "2026-09-06T04:34:50.159Z"
+  },
+  {
+    "email": "chiranjeevip@byteridge.com",
+    "name": "Chiranjeevi Pannem",
+    "company": "Byteridge",
+    "status": "skipped_invalid_domain",
+    "error": "HR Mailbox does not exist / Deactivated (550 5.1.1)",
+    "timestamp": "2026-09-06T04:34:52.599Z"
+  },
+  {
+    "email": "chitram@zconsolutions.com",
+    "name": "Chitra Markale",
+    "company": "Solutions",
+    "status": "skipped_invalid_domain",
+    "error": "HR Mailbox does not exist / Deactivated (550 5.1.1)",
+    "timestamp": "2026-09-06T04:34:52.862Z"
+  },
+  {
+    "email": "chitra.ravi@ample.co.in",
+    "name": "Chitra Ravi",
+    "company": "of HR Ample Technologies",
+    "status": "skipped_invalid_domain",
+    "error": "HR Mailbox does not exist / Deactivated (550 5.1.1)",
+    "timestamp": "2026-09-06T04:34:53.028Z"
+  },
+  {
+    "email": "cireesha.m@etisbew.com",
+    "name": "Cireesha Mailavarapu",
+    "company": "Etisbew",
+    "status": "skipped_invalid_domain",
+    "error": "HR Mailbox does not exist / Deactivated (550 5.1.1)",
+    "timestamp": "2026-09-06T04:34:53.419Z"
+  },
+  {
+    "email": "saurabh@caastle.com",
+    "name": "Crp Saurabh",
+    "company": "of Total Rewards and People Operations CaaStle",
+    "status": "skipped_invalid_domain",
+    "error": "Domain has no active MX records",
+    "timestamp": "2026-09-06T04:34:53.438Z"
+  },
+  {
+    "email": "cynthia@netcore.co.in",
+    "name": "Cynthia Rodrigues",
+    "company": "Netcore",
+    "status": "skipped_invalid_domain",
+    "error": "HR Mailbox does not exist / Deactivated (550 5.1.1)",
+    "timestamp": "2026-09-06T04:34:53.570Z"
+  },
+  {
+    "email": "damayanti.ghosh@getvymo.com",
+    "name": "Damayanti Ghosh",
+    "company": "of Talent Acquisition Vymo",
+    "status": "sent",
+    "messageId": "<808e3370-648c-acac-264e-57e5601b45f5@gmail.com>",
+    "timestamp": "2026-09-06T04:35:03.075Z"
+  },
+  {
+    "email": "daniel.shaw@kpipartners.com",
+    "name": "Daniel Shaw",
+    "company": "of HR & Talent Acquisition KPI Partners",
+    "status": "skipped_invalid_domain",
+    "error": "HR Mailbox does not exist / Deactivated (550 5.1.1)",
+    "timestamp": "2026-09-06T04:35:09.604Z"
+  },
+  {
+    "email": "dathree.javvadi@vncservices.in",
+    "name": "Dathree Javvadi",
+    "company": "Vncservices",
+    "status": "skipped_invalid_domain",
+    "error": "HR Mailbox does not exist / Deactivated (550 5.1.1)",
+    "timestamp": "2026-09-06T04:35:09.880Z"
+  },
+  {
+    "email": "debashishb@interrait.com",
+    "name": "Debashish Bhattacharya",
+    "company": "of HR Interra Information Technologies",
+    "status": "skipped_invalid_domain",
+    "error": "HR Mailbox does not exist / Deactivated (550 5.1.1)",
+    "timestamp": "2026-09-06T04:35:10.058Z"
+  },
+  {
+    "email": "debdutta.bhowmick@atidiv.com",
+    "name": "Debdutta Bhowmick",
+    "company": "Atidiv",
+    "status": "sent",
+    "messageId": "<54f73a56-6571-3538-b264-4292e31ca6c9@gmail.com>",
+    "timestamp": "2026-09-06T04:35:19.801Z"
+  },
+  {
+    "email": "debojit.das@betterplace.co.in",
+    "name": "Debojit Das",
+    "company": "Betterplace",
+    "status": "skipped_invalid_domain",
+    "error": "HR Mailbox does not exist / Deactivated (550 5.1.1)",
+    "timestamp": "2026-09-06T04:35:23.735Z"
+  },
+  {
+    "email": "dpassanha@everydayhealth.com",
+    "name": "Deborah Passanha",
+    "company": "of Operations / HR Head Everyday Health Group",
+    "status": "skipped_invalid_domain",
+    "error": "HR Mailbox does not exist / Deactivated (550 5.1.1)",
+    "timestamp": "2026-09-06T04:35:25.159Z"
+  },
+  {
+    "email": "deep@thinkbridge.in",
+    "name": "Deep Ambike",
+    "company": "Thinkbridge",
+    "status": "skipped_invalid_domain",
+    "error": "HR Mailbox does not exist / Deactivated (550 5.1.1)",
+    "timestamp": "2026-09-06T04:35:25.411Z"
+  },
+  {
+    "email": "deep.patel@ics-global.in",
+    "name": "Deep Patel",
+    "company": "Ics-global",
+    "status": "sent",
+    "messageId": "<ef3ad0b0-75c7-6bdf-09f8-0bd78d27050c@gmail.com>",
+    "timestamp": "2026-09-06T04:35:34.709Z"
+  },
+  {
+    "email": "bdeepa@zeomega.com",
+    "name": "Deepa Baburaj",
+    "company": "Zeomega",
+    "status": "skipped_invalid_domain",
+    "error": "HR Mailbox does not exist / Deactivated (550 5.1.1)",
+    "timestamp": "2026-09-06T04:35:40.426Z"
+  },
+  {
+    "email": "deepa@prdxn.com",
+    "name": "Deepa Dand",
+    "company": "of Accounts/Administration (HR Support) Axioned",
+    "status": "sent",
+    "messageId": "<d706e32d-f598-07ef-5191-06a9ef1df778@gmail.com>",
+    "timestamp": "2026-09-06T04:35:50.400Z"
+  },
+  {
+    "email": "deepa.makhija@gupshup.io",
+    "name": "Deepa Makhija",
+    "company": "Gupshup",
+    "status": "sent",
+    "messageId": "<6c6c4f30-4bdd-e0c9-8e74-8058c35334fe@gmail.com>",
+    "timestamp": "2026-09-06T04:36:02.114Z"
+  },
+  {
+    "email": "deepa.mukherjee@esri.in",
+    "name": "Deepa Mukherjee",
+    "company": "Esri",
+    "status": "skipped_invalid_domain",
+    "error": "HR Mailbox does not exist / Deactivated (550 5.1.1)",
+    "timestamp": "2026-09-06T04:36:06.387Z"
+  },
+  {
+    "email": "deepa.palaniswamy@ducenit.com",
+    "name": "Deepa Palaniswamy",
+    "company": "Ducenit",
+    "status": "skipped_invalid_domain",
+    "error": "HR Mailbox does not exist / Deactivated (550 5.1.1)",
+    "timestamp": "2026-09-06T04:36:08.098Z"
+  },
+  {
+    "email": "deepa.sripathi@konicaminolta.com",
+    "name": "Deepa Sripathi",
+    "company": "Konicaminolta",
+    "status": "skipped_invalid_domain",
+    "error": "HR Mailbox does not exist / Deactivated (550 5.1.1)",
+    "timestamp": "2026-09-06T04:36:11.438Z"
+  },
+  {
+    "email": "deepak.babu@appviewx.com",
+    "name": "Deepak Babu",
+    "company": "Appviewx",
+    "status": "skipped_invalid_domain",
+    "error": "HR Mailbox does not exist / Deactivated (550 5.1.1)",
+    "timestamp": "2026-09-06T04:36:13.149Z"
+  },
+  {
+    "email": "deepak.chavan@visiblealpha.com",
+    "name": "Deepak Chavan",
+    "company": "Visiblealpha",
+    "status": "sent",
+    "messageId": "<395c0933-0ebe-43ca-f575-7ad41f365aa8@gmail.com>",
+    "timestamp": "2026-09-06T04:36:22.726Z"
+  },
+  {
+    "email": "deepak.deshpande@netmagicsolutions.com",
+    "name": "Deepak Deshpande",
+    "company": "Netmagicsolutions",
+    "status": "sent",
+    "messageId": "<a4234f58-6fc1-45dc-7745-4ad9b8bad090@gmail.com>",
+    "timestamp": "2026-09-06T04:36:36.079Z"
+  },
+  {
+    "email": "deepak@uchicago.edu",
+    "name": "Deepak Gelda",
+    "company": "Services",
+    "status": "sent",
+    "messageId": "<cc8d58f8-9490-d6ce-3642-0e0d36ad889e@gmail.com>",
+    "timestamp": "2026-09-06T04:36:49.239Z"
+  },
+  {
+    "email": "dkhanna@ishir.com",
+    "name": "Deepak Khanna",
+    "company": "Ishir",
+    "status": "skipped_invalid_domain",
+    "error": "HR Mailbox does not exist / Deactivated (550 5.1.1)",
+    "timestamp": "2026-09-06T04:36:54.564Z"
+  },
+  {
+    "email": "deepak.melwani@galaxyweblinks.co.in",
+    "name": "Deepak Melwani",
+    "company": "of Talent Acquisition and Employer Branding Galaxy Weblinks Inc",
+    "status": "sent",
+    "messageId": "<f17a164d-47d0-b225-06aa-d4bddd5bbfe8@gmail.com>",
+    "timestamp": "2026-09-06T04:37:04.175Z"
+  },
+  {
+    "email": "deepak.pawar@accutech.co.in",
+    "name": "Deepak Pawar",
+    "company": "Solutions",
+    "status": "sent",
+    "messageId": "<01442146-2a01-b64b-c9b7-b3d1b51e3ccc@gmail.com>",
+    "timestamp": "2026-09-06T04:37:18.345Z"
+  },
+  {
+    "email": "deepak.ramakrishnan@csquare.in",
+    "name": "Deepak Ramakrishnan",
+    "company": "Solutions",
+    "status": "sent",
+    "messageId": "<add255a2-1ba2-f8c3-6587-250c9dfcb652@gmail.com>",
+    "timestamp": "2026-09-06T04:37:31.846Z"
+  },
+  {
+    "email": "deepak@dixitindia.com",
+    "name": "Deepak Singh",
+    "company": "of HR Dixit Infotech Services",
+    "status": "skipped_invalid_domain",
+    "error": "HR Mailbox does not exist / Deactivated (550 5.1.1)",
+    "timestamp": "2026-09-06T04:37:37.247Z"
+  },
+  {
+    "email": "deepali@proximity.tech",
+    "name": "Deepali",
+    "company": "Proximity",
+    "status": "sent",
+    "messageId": "<10de70fa-65c8-bff2-e8ef-82d5228b09c1@gmail.com>",
+    "timestamp": "2026-09-06T04:37:46.409Z"
+  },
+  {
+    "email": "deepali.verdi@genzeon.com",
+    "name": "Deepali Verdi",
+    "company": "Genzeon",
+    "status": "skipped_invalid_domain",
+    "error": "HR Mailbox does not exist / Deactivated (550 5.1.1)",
+    "timestamp": "2026-09-06T04:37:52.519Z"
+  },
+  {
+    "email": "deepashree.v@skience.com",
+    "name": "Deepashree V",
+    "company": "Skience",
+    "status": "skipped_invalid_domain",
+    "error": "HR Mailbox does not exist / Deactivated (550 5.1.1)",
+    "timestamp": "2026-09-06T04:37:53.950Z"
+  },
+  {
+    "email": "deepika@appinessworld.com",
+    "name": "Deepika Pandita",
+    "company": "Interactive",
+    "status": "sent",
+    "messageId": "<ecdae353-967d-5750-5a5d-29c9a1b9ae9c@gmail.com>",
+    "timestamp": "2026-09-06T04:38:03.894Z"
+  },
+  {
+    "email": "deepika@webkul.com",
+    "name": "Deepika Singh",
+    "company": "Webkul",
+    "status": "sent",
+    "messageId": "<a36c2659-a9ca-e9fa-3ec8-4d399fa1b179@gmail.com>",
+    "timestamp": "2026-09-06T04:38:16.890Z"
+  },
+  {
+    "email": "deepthi.kesireddy@smartims.com",
+    "name": "Deepthi Kesireddy",
+    "company": "of Human Resources Smart IMS",
+    "status": "skipped_invalid_domain",
+    "error": "HR Mailbox does not exist / Deactivated (550 5.1.1)",
+    "timestamp": "2026-09-06T05:08:18.387Z"
+  },
+  {
+    "email": "deepthi.v@etggs.com",
+    "name": "Deepthi Vorem",
+    "company": "Etggs",
+    "status": "skipped_invalid_domain",
+    "error": "HR Mailbox does not exist / Deactivated (550 5.1.1)",
+    "timestamp": "2026-09-06T05:08:18.610Z"
+  },
+  {
+    "email": "deepti@mindcraft.in",
+    "name": "Deepti Ashar",
+    "company": "Mindcraft",
+    "status": "sent",
+    "messageId": "<0cdb33ec-4c8a-672b-ac95-6c44e8e068c6@gmail.com>",
+    "timestamp": "2026-09-06T05:08:29.960Z"
+  },
+  {
+    "email": "deepti.bathija@orcapodservices.com",
+    "name": "Deepti Bathija",
+    "company": "Orcapodservices",
+    "status": "sent",
+    "messageId": "<59f74c2a-1aaa-30f6-db23-35d789053828@gmail.com>",
+    "timestamp": "2026-09-06T05:08:46.342Z"
+  },
+  {
+    "email": "dlewis@conviva.com",
+    "name": "Deepti Lewis",
+    "company": "Conviva",
+    "status": "sent",
+    "messageId": "<4a933f1b-5032-ee54-e9b7-89d0cce860c6@gmail.com>",
+    "timestamp": "2026-09-06T05:08:58.732Z"
+  },
+  {
+    "email": "deepti.m@trell.in",
+    "name": "Deepti Mendiratta",
+    "company": "Trell",
+    "status": "skipped_invalid_domain",
+    "error": "HR Mailbox does not exist / Deactivated (550 5.1.1)",
+    "timestamp": "2026-09-06T05:09:01.856Z"
+  },
+  {
+    "email": "deepti.n@accelq.com",
+    "name": "Deepti N",
+    "company": "Accelq",
+    "status": "skipped_invalid_domain",
+    "error": "HR Mailbox does not exist / Deactivated (550 5.1.1)",
+    "timestamp": "2026-09-06T05:09:03.032Z"
+  },
+  {
+    "email": "deepti.sahni@mobiloitte.com",
+    "name": "Deepti Sahni",
+    "company": "Mobiloitte",
+    "status": "sent",
+    "messageId": "<af83030d-aedb-df37-acfa-ec1b37073aa3@gmail.com>",
+    "timestamp": "2026-09-06T05:09:12.528Z"
+  },
+  {
+    "email": "dgtewari@quark.com",
+    "name": "Deepti Tewari",
+    "company": "Quark",
+    "status": "sent",
+    "messageId": "<63717214-e6aa-b104-668b-64bda9602386@gmail.com>",
+    "timestamp": "2026-09-06T05:09:25.357Z"
+  },
+  {
+    "email": "deeptiw@pre-scient.com",
+    "name": "Deepti Waghmare",
+    "company": "Pre-scient",
+    "status": "skipped_invalid_domain",
+    "error": "HR Mailbox does not exist / Deactivated (550 5.1.1)",
+    "timestamp": "2026-09-06T05:09:30.391Z"
+  },
+  {
+    "email": "deo.kumar@akalinfosys.com",
+    "name": "Deo Kumar",
+    "company": "and Deployment Head Akal Information Systems",
+    "status": "sent",
+    "messageId": "<677fed61-4f4a-0232-bf56-1a353bca8a2b@gmail.com>",
+    "timestamp": "2026-09-06T05:09:40.238Z"
+  },
+  {
+    "email": "devang@strategicerp.com",
+    "name": "Devang Hindocha",
+    "company": "of HR StrategicERP Business Automation Solutions",
+    "status": "skipped_invalid_domain",
+    "error": "HR Mailbox does not exist / Deactivated (550 5.1.1)",
+    "timestamp": "2026-09-06T05:09:44.998Z"
+  },
+  {
+    "email": "devansh.narang@loco.gg",
+    "name": "Devansh Narang",
+    "company": "of Content & Talent Loco",
+    "status": "sent",
+    "messageId": "<08635564-dfb9-b8fa-4457-31802bcbf7fe@gmail.com>",
+    "timestamp": "2026-09-06T05:09:54.553Z"
+  },
+  {
+    "email": "devanshi@brainerhub.com",
+    "name": "Devanshi Shah",
+    "company": "of HR & Talent Acquisition BrainerHub Solutions",
+    "status": "sent",
+    "messageId": "<5c7c4253-76cf-d837-dc7e-bb54c610e1e9@gmail.com>",
+    "timestamp": "2026-09-06T05:10:07.224Z"
+  },
+  {
+    "email": "devershi.desai@ssminfotech.com",
+    "name": "Devershi Desai",
+    "company": "Ssminfotech",
+    "status": "sent",
+    "messageId": "<ac88fddd-cf2b-02a7-ec2c-7e4f12692a9f@gmail.com>",
+    "timestamp": "2026-09-06T05:10:20.036Z"
+  },
+  {
+    "email": "dreddy@dvginteractive.com",
+    "name": "Devi Reddy",
+    "company": "Dvginteractive",
+    "status": "skipped_invalid_domain",
+    "error": "HR Mailbox does not exist / Deactivated (550 5.1.1)",
+    "timestamp": "2026-09-06T05:10:26.282Z"
+  },
+  {
+    "email": "devika@shopx.in",
+    "name": "Devika Chauhan",
+    "company": "Human Resource ShopX",
+    "status": "skipped_invalid_domain",
+    "error": "HR Mailbox does not exist / Deactivated (550 5.1.1)",
+    "timestamp": "2026-09-06T05:10:27.818Z"
+  },
+  {
+    "email": "dharmendra.rawat@lumiq.ai",
+    "name": "Dharmendra Rawat",
+    "company": "Lumiq",
+    "status": "skipped_invalid_domain",
+    "error": "HR Mailbox does not exist / Deactivated (550 5.1.1)",
+    "timestamp": "2026-09-06T05:10:27.985Z"
+  },
+  {
+    "email": "dharmendra@akshay.com",
+    "name": "Dharmendra Singh",
+    "company": "Akshay",
+    "status": "skipped_invalid_domain",
+    "error": "HR Mailbox does not exist / Deactivated (550 5.1.1)",
+    "timestamp": "2026-09-06T05:10:28.203Z"
+  },
+  {
+    "email": "dharmik@atlan.com",
+    "name": "Dharmik Gohel",
+    "company": "Atlan",
+    "status": "sent",
+    "messageId": "<3acb0124-6bf6-89a7-a509-1ee7eaa106e6@gmail.com>",
+    "timestamp": "2026-09-06T05:10:37.649Z"
+  },
+  {
+    "email": "dshankar@dataintensity.com",
+    "name": "Dhinesh Shankar",
+    "company": "Dataintensity",
+    "status": "skipped_invalid_domain",
+    "error": "HR Mailbox does not exist / Deactivated (550 5.1.1)",
+    "timestamp": "2026-09-06T05:10:43.792Z"
+  },
+  {
+    "email": "dkamboj@newtglobalcorp.com",
+    "name": "Dhirendra Kamboj",
+    "company": "Newtglobalcorp",
+    "status": "skipped_invalid_domain",
+    "error": "HR Mailbox does not exist / Deactivated (550 5.1.1)",
+    "timestamp": "2026-09-06T05:10:44.818Z"
+  },
+  {
+    "email": "dhirendra.panda@ivalue.co.in",
+    "name": "Dhirendra Panda",
+    "company": "Ivalue",
+    "status": "skipped_invalid_domain",
+    "error": "HR Mailbox does not exist / Deactivated (550 5.1.1)",
+    "timestamp": "2026-09-06T05:10:45.737Z"
+  },
+  {
+    "email": "dhritiparnad@zendrive.com",
+    "name": "Dhritiparna Dhar",
+    "company": "Zendrive",
+    "status": "sent",
+    "messageId": "<9cc37cf5-75c4-aa58-f3d7-be958f2c8ffc@gmail.com>",
+    "timestamp": "2026-09-06T05:10:55.363Z"
+  },
+  {
+    "email": "diksha@apptware.com",
+    "name": "Diksha Rohokale",
+    "company": "Apptware",
+    "status": "sent",
+    "messageId": "<3f22e130-7992-b615-0339-4f1f039d834f@gmail.com>",
+    "timestamp": "2026-09-06T05:11:09.294Z"
+  },
+  {
+    "email": "diksha.sisodia@eternussolutions.com",
+    "name": "Diksha Sisodia",
+    "company": "Eternussolutions",
+    "status": "skipped_invalid_domain",
+    "error": "Domain has no active MX records",
+    "timestamp": "2026-09-06T05:11:12.498Z"
+  },
+  {
+    "email": "dileep.choyappally@nestgroup.net",
+    "name": "Dileep Choyappally",
+    "company": "& Head of Human Resources NeST Digital",
+    "status": "skipped_invalid_domain",
+    "error": "HR Mailbox does not exist / Deactivated (550 5.1.1)",
+    "timestamp": "2026-09-06T05:11:12.619Z"
+  },
+  {
+    "email": "borah.dilip@senrysa.com",
+    "name": "Dilip Borah",
+    "company": "Senrysa",
+    "status": "skipped_invalid_domain",
+    "error": "HR Mailbox does not exist / Deactivated (550 5.1.1)",
+    "timestamp": "2026-09-06T05:11:12.912Z"
+  },
+  {
+    "email": "dilip.s@theimperative.in",
+    "name": "Dilip Satpute",
+    "company": "Theimperative",
+    "status": "skipped_invalid_domain",
+    "error": "HR Mailbox does not exist / Deactivated (550 5.1.1)",
+    "timestamp": "2026-09-06T05:11:13.005Z"
+  },
+  {
+    "email": "dimpal.patel@tacttree.com",
+    "name": "Dimpal Patel",
+    "company": "Tacttree",
+    "status": "skipped_invalid_domain",
+    "error": "HR Mailbox does not exist / Deactivated (550 5.1.1)",
+    "timestamp": "2026-09-06T05:11:14.416Z"
+  },
+  {
+    "email": "dgokhale@crgroup.co.in",
+    "name": "Dinanath Gokhale",
+    "company": "Crgroup",
+    "status": "skipped_invalid_domain",
+    "error": "HR Mailbox does not exist / Deactivated (550 5.1.1)",
+    "timestamp": "2026-09-06T05:11:14.689Z"
+  },
+  {
+    "email": "dinesh.hemdev@logixal.com",
+    "name": "Dinesh Hemdev",
+    "company": "of Talent Acquisition Logixal Inc",
+    "status": "skipped_invalid_domain",
+    "error": "HR Mailbox does not exist / Deactivated (550 5.1.1)",
+    "timestamp": "2026-09-06T05:11:14.803Z"
+  },
+  {
+    "email": "dinesh.rai@hirexa.com",
+    "name": "Dinesh Rai",
+    "company": "Solutions",
+    "status": "skipped_invalid_domain",
+    "error": "HR Mailbox does not exist / Deactivated (550 5.1.1)",
+    "timestamp": "2026-09-06T05:11:14.997Z"
+  },
+  {
+    "email": "dinesh.yuvaraj@ivymobility.com",
+    "name": "Dinesh Yuvaraj",
+    "company": "Ivymobility",
+    "status": "skipped_invalid_domain",
+    "error": "HR Mailbox does not exist / Deactivated (550 5.1.1)",
+    "timestamp": "2026-09-06T05:11:16.154Z"
+  },
+  {
+    "email": "dipalichavan@credenceanalytics.com",
+    "name": "Dipali Chavan",
+    "company": "Credenceanalytics",
+    "status": "skipped_invalid_domain",
+    "error": "HR Mailbox does not exist / Deactivated (550 5.1.1)",
+    "timestamp": "2026-09-06T05:11:17.565Z"
+  },
+  {
+    "email": "dipesh@pesto.tech",
+    "name": "Dipesh Jain",
+    "company": "Pesto",
+    "status": "sent",
+    "messageId": "<255dee05-3d28-939a-155e-6ae086c5cd16@gmail.com>",
+    "timestamp": "2026-09-06T05:11:27.402Z"
+  },
+  {
+    "email": "dipikasharma@slx.co.in",
+    "name": "Dipika Sharma",
+    "company": "of HR at Securelynkx Networks Securelynkx Networks",
+    "status": "skipped_invalid_domain",
+    "error": "HR Mailbox does not exist / Deactivated (550 5.1.1)",
+    "timestamp": "2026-09-06T05:11:32.948Z"
+  },
+  {
+    "email": "dipthir@dckap.com",
+    "name": "Dipthi Rajagopal",
+    "company": "Dckap",
+    "status": "sent",
+    "messageId": "<d7c8992b-e5f8-ad01-dc92-9ff785c184fe@gmail.com>",
+    "timestamp": "2026-09-06T05:11:42.779Z"
+  },
+  {
+    "email": "dipti@insider.in",
+    "name": "Dipti Goel",
+    "company": "Insider",
+    "status": "skipped_invalid_domain",
+    "error": "Bounced: Address not found / Deactivated (550 5.1.1)",
+    "timestamp": "2026-09-06T10:55:00.000Z",
+    "bouncedAt": "2026-09-06T05:28:19.637Z"
   }
 ]
