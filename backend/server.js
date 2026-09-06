@@ -234,14 +234,14 @@ class CampaignEngine {
     this.recentLogs = [];
   }
 
-  // Get set of already sent emails to prevent any duplicates
+  // Get set of already processed emails (sent or confirmed dead/skipped) to prevent duplicate work
   getSentEmailsSet() {
     try {
       if (fs.existsSync(SENT_LOG_FILE)) {
         const history = JSON.parse(fs.readFileSync(SENT_LOG_FILE, 'utf8') || '[]');
         return new Set(
           history
-            .filter(item => item.status === 'sent')
+            .filter(item => item.status === 'sent' || item.status === 'skipped_invalid_domain')
             .map(item => (item.email || '').toLowerCase().trim())
         );
       }
@@ -249,7 +249,7 @@ class CampaignEngine {
     return new Set();
   }
 
-  // Append a log entry to disk
+  // Append a log entry to disk (deduplicating by email)
   logResult(entry) {
     entry.timestamp = new Date().toISOString();
     this.recentLogs.unshift(entry);
@@ -260,7 +260,13 @@ class CampaignEngine {
       if (fs.existsSync(SENT_LOG_FILE)) {
         history = JSON.parse(fs.readFileSync(SENT_LOG_FILE, 'utf8') || '[]');
       }
-      history.push(entry);
+      const cleanEmail = (entry.email || '').toLowerCase().trim();
+      const existingIdx = history.findIndex(h => (h.email || '').toLowerCase().trim() === cleanEmail);
+      if (existingIdx >= 0) {
+        history[existingIdx] = entry;
+      } else {
+        history.push(entry);
+      }
       fs.writeFileSync(SENT_LOG_FILE, JSON.stringify(history, null, 2), 'utf8');
     } catch (e) {
       console.error('Failed to update sent_log.json:', e);

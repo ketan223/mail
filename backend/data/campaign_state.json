@@ -9,8 +9,8 @@
   "stats": {
     "totalQueued": 1826,
     "sent": 75,
-    "failed": 1,
-    "skippedMx": 114
+    "failed": 0,
+    "skippedMx": 80
   },
   "senderName": "Ketan Tiwari",
   "subject": "Application: Software & AI Engineer - Ketan Tiwari - {{company}}",
