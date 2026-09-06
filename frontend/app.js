@@ -302,6 +302,16 @@ document.addEventListener('DOMContentLoaded', () => {
     if (chipSkipped) chipSkipped.textContent = skippedCount;
     if (chipPending) chipPending.textContent = pendingCount;
     if (savedCountBadge) savedCountBadge.textContent = pendingCount;
+
+    // Keep Left Panel metrics 100% in sync with overall database totals
+    if (metricSent) metricSent.textContent = sentCount;
+    if (metricRemaining) metricRemaining.textContent = pendingCount;
+    if (metricSkipped) metricSkipped.textContent = skippedCount;
+    if (metricFailed) metricFailed.textContent = 0;
+    if (statSent) statSent.textContent = sentCount;
+    if (statFailed) statFailed.textContent = 0;
+    if (statTotal) statTotal.textContent = allContacts.length;
+
     updateSendButtonCount();
   }
 
@@ -885,14 +895,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Update Metrics
     if (status.stats) {
-      metricSent.textContent = status.stats.sent;
-      metricRemaining.textContent = status.remainingInQueue;
-      metricSkipped.textContent = status.stats.skippedMx;
-      metricFailed.textContent = status.stats.failed;
+      const chipSent = document.getElementById('chipSentCount');
+      const chipPending = document.getElementById('chipPendingCount');
+      const chipSkipped = document.getElementById('chipSkippedCount');
 
-      statSent.textContent = status.stats.sent;
-      statFailed.textContent = status.stats.failed;
-      statTotal.textContent = (status.stats.sent + status.stats.failed + status.stats.skippedMx + status.remainingInQueue);
+      const displaySent = (allContacts && allContacts.length > 0 && chipSent) ? chipSent.textContent : status.stats.sent;
+      const displayRemaining = (allContacts && allContacts.length > 0 && chipPending) ? chipPending.textContent : status.remainingInQueue;
+      const displaySkipped = (allContacts && allContacts.length > 0 && chipSkipped) ? chipSkipped.textContent : status.stats.skippedMx;
+
+      metricSent.textContent = displaySent;
+      metricRemaining.textContent = displayRemaining;
+      metricSkipped.textContent = displaySkipped;
+      metricFailed.textContent = status.stats.failed || 0;
+
+      statSent.textContent = displaySent;
+      statFailed.textContent = status.stats.failed || 0;
+      statTotal.textContent = (allContacts && allContacts.length > 0) ? allContacts.length : (status.stats.sent + status.stats.failed + status.stats.skippedMx + status.remainingInQueue);
 
       const currentProcessed = status.stats.sent + status.stats.skippedMx + status.stats.failed;
       if (currentProcessed !== lastHistorySyncCount) {
