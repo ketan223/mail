@@ -1,18 +1,18 @@
 {
-  "status": "waiting_pause",
+  "status": "paused",
   "batchSize": 50,
   "pauseDurationMs": 1800000,
-  "currentBatchNumber": 14,
-  "sentInCurrentBatch": 15,
-  "totalBatches": 33,
-  "nextBatchRunTime": 1788753349905,
+  "currentBatchNumber": 15,
+  "sentInCurrentBatch": 50,
+  "totalBatches": 31,
+  "nextBatchRunTime": null,
   "stats": {
     "totalQueued": 1528,
-    "sent": 208,
+    "sent": 258,
     "failed": 1,
-    "skippedMx": 389
+    "skippedMx": 478
   },
   "senderName": "Ketan Tiwari",
-  "subject": "Application: Software & AI Engineer - Ketan Tiwari - {{company}}",
-  "message": "Dear {{name}},\r\n\r\nI hope you are doing well. I am writing to express my strong interest in software engineering and AI roles at {{company}}.\r\n\r\nI am a Full-Stack Engineer specializing in Generative AI, Agentic workflows, and Machine Learning—experienced in building end-to-end architectures from LLM/RAG pipelines to scalable backend APIs and user interfaces.\r\n\r\nPlease find my resume attached for your review. I would welcome the opportunity for a brief conversation to discuss how my skillset aligns with {{company}}'s current goals.\r\n\r\nThank you for your time and consideration.\r\n\r\nBest regards,\r\nKetan Tiwari\r\ntiwariketan045@gmail.com"
+  "subject": "Application: Software Engineering & AI Intern - Ketan Tiwari - {{company}}",
+  "message": "Dear {{name}},\r\n\r\nI hope you are doing well.\r\n\r\nI am writing to inquire about Software Engineering and AI Internship opportunities at {{company}}.\r\n\r\nI am a Full-Stack & Generative AI Engineer with hands-on experience building production-ready LLM/RAG pipelines, autonomous agentic workflows, scalable backend APIs, and modern web applications. I am keen to join {{company}} as an engineering intern to contribute directly to impactful projects and learn from your talented engineering team.\r\n\r\nPlease find my resume attached for your review. I would welcome the opportunity for a brief conversation to discuss how I can add value to your team.\r\n\r\nThank you for your time and consideration.\r\n\r\nBest regards,\r\nKetan Tiwari\r\ntiwariketan045@gmail.com"
 }

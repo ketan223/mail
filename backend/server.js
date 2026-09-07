@@ -1136,10 +1136,10 @@ app.post('/api/campaign/stop', (req, res) => {
   }
 });
 
-// Update campaign config dynamically (batchSize, pauseMinutes)
+// Update campaign config dynamically (batchSize, pauseMinutes, subject, message, senderName)
 app.post('/api/campaign/update-config', (req, res) => {
   try {
-    const { batchSize, pauseMinutes } = req.body;
+    const { batchSize, pauseMinutes, subject, message, senderName } = req.body;
     if (batchSize && parseInt(batchSize, 10) > 0) {
       campaignEngine.batchSize = parseInt(batchSize, 10);
       campaignEngine.totalBatches = Math.ceil(campaignEngine.queue.length / campaignEngine.batchSize) + campaignEngine.currentBatchNumber;
@@ -1147,10 +1147,22 @@ app.post('/api/campaign/update-config', (req, res) => {
     if (pauseMinutes && parseInt(pauseMinutes, 10) > 0) {
       campaignEngine.pauseDurationMs = parseInt(pauseMinutes, 10) * 60 * 1000;
     }
+    if (subject && subject.trim()) {
+      if (!campaignEngine.activePayload) campaignEngine.activePayload = {};
+      campaignEngine.activePayload.subject = subject.trim();
+    }
+    if (message && message.trim()) {
+      if (!campaignEngine.activePayload) campaignEngine.activePayload = {};
+      campaignEngine.activePayload.message = message.trim();
+    }
+    if (senderName && senderName.trim()) {
+      if (!campaignEngine.activePayload) campaignEngine.activePayload = {};
+      campaignEngine.activePayload.senderName = senderName.trim();
+    }
     campaignEngine.saveState();
     res.json({
       success: true,
-      message: `Batch size updated to ${campaignEngine.batchSize}, pause updated to ${campaignEngine.pauseDurationMs / 60000} mins.`,
+      message: 'Campaign configuration updated successfully.',
       status: campaignEngine.getStatus()
     });
   } catch (err) {
