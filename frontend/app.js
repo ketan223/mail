@@ -38,6 +38,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const stopCampaignBtn = document.getElementById('stopCampaignBtn');
   const countdownContainer = document.getElementById('countdownContainer');
   const countdownTimer = document.getElementById('countdownTimer');
+  const countdownSubText = document.getElementById('countdownSubText');
   const metricSent = document.getElementById('metricSent');
   const metricRemaining = document.getElementById('metricRemaining');
   const metricSkipped = document.getElementById('metricSkipped');
@@ -891,17 +892,20 @@ document.addEventListener('DOMContentLoaded', () => {
     autopilotStatusBadge.className = `autopilot-badge ${status.status}`;
     if (status.status === 'running_batch') {
       const current = status.sentInCurrentBatch || 0;
-      const target = status.batchSize || 15;
+      const target = status.batchSize || 50;
       autopilotStatusText.textContent = `Batch ${status.currentBatch}/${status.totalBatches}: Sent ${current}/${target} (Resting 30m after ${target})...`;
       pauseCampaignBtn.classList.remove('hidden');
       resumeCampaignBtn.classList.add('hidden');
       countdownContainer.classList.add('hidden');
     } else if (status.status === 'waiting_pause') {
-      const bSize = status.batchSize || 15;
+      const bSize = status.batchSize || 50;
       autopilotStatusText.textContent = `Batch ${status.currentBatch} Done (${bSize} sent)! Resting 30 mins...`;
       pauseCampaignBtn.classList.remove('hidden');
       resumeCampaignBtn.classList.remove('hidden');
       countdownContainer.classList.remove('hidden');
+      if (countdownSubText) {
+        countdownSubText.textContent = `Domain pre-check will scan next ${bSize} recipients`;
+      }
 
       // Countdown display
       const mins = Math.floor(status.secondsUntilNext / 60);

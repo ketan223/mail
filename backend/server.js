@@ -1319,7 +1319,7 @@ app.listen(PORT, () => {
   console.log(`🚀 Resume Blaster with Autopilot listening on PORT ${PORT}`);
   console.log(`📧 Gmail User: ${process.env.GMAIL_USER || 'NOT CONFIGURED'}`);
   console.log(`🛡️ DNS / MX Record Pre-flight Validation: ENABLED`);
-  console.log(`⏱️ Autopilot Engine: 13 Emails/Batch + 30-Min Pause`);
+  console.log(`⏱️ Autopilot Engine: 50 Emails/Batch + 30-Min Pause`);
   console.log(`🌐 Web UI: http://localhost:${PORT}`);
   console.log(`===========================================`);
 });
