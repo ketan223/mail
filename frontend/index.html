@@ -112,7 +112,7 @@ tiwariketan045@gmail.com</textarea>
           <div class="campaign-config-row">
             <div class="config-field">
               <label for="batchSizeInput">Batch Size:</label>
-              <input type="number" id="batchSizeInput" value="15" min="1" max="50">
+              <input type="number" id="batchSizeInput" value="50" min="1" max="100">
             </div>
             <div class="config-field">
               <label for="pauseMinutesInput">Pause Between Batches:</label>
@@ -125,7 +125,7 @@ tiwariketan045@gmail.com</textarea>
             </div>
             <div class="config-field">
               <label>Intra-Email Delay:</label>
-              <span class="pill-info">2 - 5s Random</span>
+              <span class="pill-info">4 - 8s Random (Safe Pacing)</span>
             </div>
           </div>
 
@@ -210,7 +210,7 @@ tiwariketan045@gmail.com</textarea>
 
           <div class="quota-warning-banner">
             <span class="warn-icon">🛡️</span>
-            <span>Gmail personal sending limit is <strong>500 emails / 24h</strong>. Our Autopilot sends <strong>15 emails every 30 mins</strong> with DNS pre-checks to keep your account 100% safe.</span>
+            <span>Gmail personal sending limit is <strong>500 emails / 24h</strong>. Autopilot is running with <strong>50 emails / batch</strong> and <strong>4–8s delay</strong> with DNS/SMTP pre-checks to keep your account safe.</span>
           </div>
 
           <!-- Contact Status Filter Chips (Default: In Queue Remaining) -->

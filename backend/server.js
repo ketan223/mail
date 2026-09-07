@@ -221,18 +221,18 @@ async function verifyMailboxExists(email) {
   }
 }
 
-// Random delay generator: 2 to 5 seconds
-const getRandomDelay = (minMs = 2000, maxMs = 5000) => {
+// Random delay generator: 4 to 8 seconds (safer spread for 50-email batches)
+const getRandomDelay = (minMs = 4000, maxMs = 8000) => {
   return Math.floor(Math.random() * (maxMs - minMs + 1)) + minMs;
 };
 
 // -------------------------------------------------------------
-// CAMPAIGN ENGINE (Stateful 13-Email Batches + 30-Min Automated Pause)
+// CAMPAIGN ENGINE (Stateful 50-Email Batches + 30-Min Automated Pause)
 // -------------------------------------------------------------
 class CampaignEngine {
   constructor() {
     this.status = 'idle'; // 'idle', 'running_batch', 'waiting_pause', 'paused', 'completed'
-    this.batchSize = 15;
+    this.batchSize = 50;
     this.pauseDurationMs = 30 * 60 * 1000; // 30 minutes
     this.activePayload = null; // { resume: { filename, buffer }, senderName, subject, message }
     this.queue = [];
@@ -249,6 +249,18 @@ class CampaignEngine {
       skippedMx: 0
     };
     this.recentLogs = [];
+  }
+
+  // Count emails sent in the last 24 hours to enforce Google's 500/day safety ceiling
+  get24hSentCount() {
+    try {
+      if (fs.existsSync(SENT_LOG_FILE)) {
+        const history = JSON.parse(fs.readFileSync(SENT_LOG_FILE, 'utf8') || '[]');
+        const cutoff = Date.now() - 24 * 60 * 60 * 1000;
+        return history.filter(h => h.status === 'sent' && h.timestamp && new Date(h.timestamp).getTime() > cutoff).length;
+      }
+    } catch (e) {}
+    return 0;
   }
 
   // Get set of already processed emails (sent or confirmed dead/skipped) to prevent duplicate work
@@ -367,6 +379,15 @@ class CampaignEngine {
         return;
       }
 
+      // Safety guard: Respect Gmail 500 emails/rolling 24h ceiling (pause at 450)
+      const sent24h = this.get24hSentCount();
+      if (sent24h >= 450) {
+        console.warn(`[SAFETY QUOTA PAUSE] Approaching Gmail 500/day limit (${sent24h} sent in last 24h). Pausing campaign for account safety.`);
+        this.status = 'paused';
+        this.saveState();
+        return;
+      }
+
       const r = this.queue.shift(); // Pull next contact from queue
       const email = (r.email || '').toLowerCase().trim();
       const displayName = r.name || 'Hiring Manager';
@@ -443,15 +464,15 @@ class CampaignEngine {
         console.error(`[FAIL] ${email}: ${err.message}`);
       }
 
-      // 4. Random delay between 2-5 seconds if we haven't finished the batch yet
+      // 4. Random delay between 4-8 seconds if we haven't finished the batch yet (safe pacing)
       if (sentInThisBatch < this.batchSize && this.queue.length > 0 && !this.isCancelled) {
-        const delay = getRandomDelay(2000, 5000);
+        const delay = getRandomDelay(4000, 8000);
         console.log(`Waiting ${delay}ms before next email in batch...`);
         await new Promise(res => setTimeout(res, delay));
       }
     }
 
-    // After attempting/completing 13 valid sends:
+    // After attempting/completing valid sends for batch:
     if (this.queue.length > 0 && !this.isCancelled) {
       this.status = 'waiting_pause';
       this.nextBatchRunTime = Date.now() + this.pauseDurationMs;
@@ -556,7 +577,7 @@ class CampaignEngine {
               message: saved.message || ''
             };
             this.queue = unsent;
-            this.batchSize = saved.batchSize || 15;
+            this.batchSize = saved.batchSize || 50;
             this.pauseDurationMs = saved.pauseDurationMs || 30 * 60 * 1000;
             this.currentBatchNumber = saved.currentBatchNumber || 2;
             this.totalBatches = Math.ceil(this.queue.length / this.batchSize) + this.currentBatchNumber;
@@ -1039,7 +1060,7 @@ app.post('/api/campaign/start', upload.single('resume'), (req, res) => {
     const senderName = (req.body.senderName || req.body.name || '').trim();
     const subject = (req.body.subject || '').trim();
     const message = (req.body.message || '').trim();
-    const batchSize = parseInt(req.body.batchSize, 10) || 15;
+    const batchSize = parseInt(req.body.batchSize, 10) || 50;
     const pauseMinutes = parseInt(req.body.pauseMinutes, 10) || 30;
 
     if (!subject) return res.status(400).json({ error: 'Subject line is required.' });
@@ -1110,6 +1131,28 @@ app.post('/api/campaign/stop', (req, res) => {
   try {
     campaignEngine.stop();
     res.json({ success: true, status: campaignEngine.getStatus() });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// Update campaign config dynamically (batchSize, pauseMinutes)
+app.post('/api/campaign/update-config', (req, res) => {
+  try {
+    const { batchSize, pauseMinutes } = req.body;
+    if (batchSize && parseInt(batchSize, 10) > 0) {
+      campaignEngine.batchSize = parseInt(batchSize, 10);
+      campaignEngine.totalBatches = Math.ceil(campaignEngine.queue.length / campaignEngine.batchSize) + campaignEngine.currentBatchNumber;
+    }
+    if (pauseMinutes && parseInt(pauseMinutes, 10) > 0) {
+      campaignEngine.pauseDurationMs = parseInt(pauseMinutes, 10) * 60 * 1000;
+    }
+    campaignEngine.saveState();
+    res.json({
+      success: true,
+      message: `Batch size updated to ${campaignEngine.batchSize}, pause updated to ${campaignEngine.pauseDurationMs / 60000} mins.`,
+      status: campaignEngine.getStatus()
+    });
   } catch (err) {
     res.status(400).json({ error: err.message });
   }

@@ -691,13 +691,38 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     selectedContactCount.textContent = selectedContactEmails.size;
-    const batchSize = batchSizeInput.value || 15;
+    const batchSize = batchSizeInput.value || 50;
     const pauseMins = pauseMinutesInput.value || 30;
     campaignBtnLabel.textContent = `Start Autopilot Campaign (${count} remaining / ${batchSize} per ${pauseMins}m)`;
   }
 
-  batchSizeInput.addEventListener('input', updateSendButtonCount);
-  pauseMinutesInput.addEventListener('change', updateSendButtonCount);
+  batchSizeInput.addEventListener('input', async () => {
+    updateSendButtonCount();
+    try {
+      const val = parseInt(batchSizeInput.value, 10);
+      if (val > 0) {
+        await fetch(`${API_BASE}/api/campaign/update-config`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ batchSize: val })
+        });
+      }
+    } catch (e) {}
+  });
+
+  pauseMinutesInput.addEventListener('change', async () => {
+    updateSendButtonCount();
+    try {
+      const val = parseInt(pauseMinutesInput.value, 10);
+      if (val > 0) {
+        await fetch(`${API_BASE}/api/campaign/update-config`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ pauseMinutes: val })
+        });
+      }
+    } catch (e) {}
+  });
 
   // -------------------------------------------------------------
   // 9. AUTOPILOT CAMPAIGN ENGINE CONTROLS
@@ -712,7 +737,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const senderName = senderNameInput.value.trim();
     const subject = emailSubjectInput.value.trim();
     const message = emailMessageInput.value.trim();
-    const batchSize = parseInt(batchSizeInput.value, 10) || 15;
+    const batchSize = parseInt(batchSizeInput.value, 10) || 50;
     const pauseMinutes = parseInt(pauseMinutesInput.value, 10) || 30;
 
     if (!subject) {
