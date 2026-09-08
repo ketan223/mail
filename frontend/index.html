@@ -60,6 +60,20 @@
                 </div>
               </div>
               <button type="button" class="btn-icon-danger" id="removeFileBtn" title="Remove PDF">✕</button>
+          </div>
+          <!-- Auto-Extracted Resume Profile Card -->
+          <div id="resumeParsedBadge" class="resume-parsed-card hidden">
+            <div class="resume-parsed-header">
+              <span class="badge-icon">✨</span>
+              <div class="parsed-title-wrap">
+                <strong id="parsedCandidateName">Candidate</strong>
+                <span class="auto-badge">Auto-Parsed Profile</span>
+              </div>
+              <button type="button" class="btn-micro" id="reapplyDraftBtn" title="Re-apply auto-generated pitch">Apply Pitch</button>
+            </div>
+            <div class="resume-parsed-details">
+              <div id="parsedCandidateContact" class="parsed-subtext"></div>
+              <div id="parsedCandidateSkills" class="skills-tag-cloud"></div>
             </div>
           </div>
         </div>
@@ -187,11 +201,12 @@ tiwariketan045@gmail.com</textarea>
           <span class="badge-accent">Step 2</span>
         </div>
 
-        <!-- Tabs: Manual / Extracted List -->
+        <!-- Tabs: Manual / Extracted List / Vault -->
         <div class="tabs-nav">
           <button class="tab-btn active" data-tab="extractedTab">Extracted HR List (<span id="savedCountBadge">0</span> Remaining)</button>
           <button class="tab-btn" data-tab="manualTab">Manual Raw Emails</button>
           <button class="tab-btn" data-tab="importPdfTab">📂 Upload HR PDF / Docs</button>
+          <button class="tab-btn" data-tab="vaultTab">📁 Document Vault (<span id="vaultTotalBadge">0</span> Delivered)</button>
         </div>
 
         <!-- TAB 1: Extracted & Saved HR Database -->
@@ -307,6 +322,40 @@ tiwariketan045@gmail.com</textarea>
           </div>
         </div>
 
+        <!-- TAB 4: Source Document Vault -->
+        <div class="tab-content" id="vaultTab">
+          <div class="vault-container">
+            <div class="vault-header-banner">
+              <div class="vault-header-text">
+                <h3>📁 Source Document Vault</h3>
+                <p>All successfully delivered HR outreach organized by their original PDF source. Past deliveries are permanently retained here even if you reset the active campaign queue.</p>
+              </div>
+              <div class="vault-stats-summary">
+                <div class="vault-stat-box">
+                  <span class="v-num" id="vaultTotalDelivered">0</span>
+                  <span class="v-lbl">Delivered HRs</span>
+                </div>
+                <div class="vault-stat-box">
+                  <span class="v-num" id="vaultTotalDocs">0</span>
+                  <span class="v-lbl">PDF Documents</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="vault-search-row">
+              <div class="search-wrapper">
+                <span class="search-icon">🔍</span>
+                <input type="text" id="vaultSearchInput" placeholder="Filter vault by recruiter name, company, or email...">
+              </div>
+              <button class="btn-tiny btn-subtle" id="refreshVaultBtn">🔄 Refresh Vault</button>
+            </div>
+
+            <div id="vaultListContainer" class="vault-accordion-list">
+              <div class="empty-state">Loading document vault...</div>
+            </div>
+          </div>
+        </div>
+
         <!-- PROGRESS & LIVE RESULTS SECTION -->
         <div class="results-section" id="resultsSection">
           <div class="results-header">
@@ -337,6 +386,44 @@ tiwariketan045@gmail.com</textarea>
         </div>
       </section>
     </main>
+  </div>
+
+  <!-- Modular Post-Campaign Cleanup Modal ("Sir, would you like to remove it?") -->
+  <div id="cleanupModal" class="modal-overlay hidden">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <div class="modal-icon">🎉</div>
+        <div>
+          <h3>Campaign Completed Successfully!</h3>
+          <p class="modal-subtitle">All queued emails have been dispatched or safely verified.</p>
+        </div>
+      </div>
+      <div class="modal-body">
+        <div class="cleanup-card">
+          <label class="cleanup-label" for="cleanupClearContactsCheckbox">
+            <input type="checkbox" id="cleanupClearContactsCheckbox" checked>
+            <div class="cleanup-text">
+              <span class="cleanup-title">Sir, would you like to remove completed HR contacts from the active queue?</span>
+              <span class="cleanup-desc">Clears the active sending table so you can drop your next PDF list cleanly. All delivered contacts remain permanently safe in your <strong>Document Vault</strong>.</span>
+            </div>
+          </label>
+        </div>
+
+        <div class="cleanup-card">
+          <label class="cleanup-label" for="cleanupClearResumeCheckbox">
+            <input type="checkbox" id="cleanupClearResumeCheckbox">
+            <div class="cleanup-text">
+              <span class="cleanup-title">Would you like to remove the uploaded resume as well?</span>
+              <span class="cleanup-desc">Remove the current active resume file, or leave unchecked to keep it loaded for your next HR outreach.</span>
+            </div>
+          </label>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-subtle" id="cleanupDismissBtn">Keep Everything & Dismiss</button>
+        <button type="button" class="btn-primary btn-danger-action" id="cleanupConfirmBtn">Apply Clean Up</button>
+      </div>
+    </div>
   </div>
 
   <!-- Notification Toast -->

@@ -98,6 +98,32 @@ document.addEventListener('DOMContentLoaded', () => {
   const clearResultsBtn = document.getElementById('clearResultsBtn');
   const toast = document.getElementById('toast');
 
+  // DOM Elements - Resume Auto-Extraction
+  const resumeParsedBadge = document.getElementById('resumeParsedBadge');
+  const parsedCandidateName = document.getElementById('parsedCandidateName');
+  const parsedCandidateContact = document.getElementById('parsedCandidateContact');
+  const parsedCandidateSkills = document.getElementById('parsedCandidateSkills');
+  const reapplyDraftBtn = document.getElementById('reapplyDraftBtn');
+
+  // DOM Elements - Source Document Vault
+  const vaultTotalBadge = document.getElementById('vaultTotalBadge');
+  const vaultTotalDelivered = document.getElementById('vaultTotalDelivered');
+  const vaultTotalDocs = document.getElementById('vaultTotalDocs');
+  const vaultSearchInput = document.getElementById('vaultSearchInput');
+  const refreshVaultBtn = document.getElementById('refreshVaultBtn');
+  const vaultListContainer = document.getElementById('vaultListContainer');
+
+  // DOM Elements - Modular Cleanup Modal
+  const cleanupModal = document.getElementById('cleanupModal');
+  const cleanupClearContactsCheckbox = document.getElementById('cleanupClearContactsCheckbox');
+  const cleanupClearResumeCheckbox = document.getElementById('cleanupClearResumeCheckbox');
+  const cleanupDismissBtn = document.getElementById('cleanupDismissBtn');
+  const cleanupConfirmBtn = document.getElementById('cleanupConfirmBtn');
+
+  let hasPromptedCleanup = false;
+  let cachedResumeDraft = null;
+  let cachedVaultData = [];
+
   const EMAIL_REGEX = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
 
   // -------------------------------------------------------------
@@ -170,8 +196,74 @@ document.addEventListener('DOMContentLoaded', () => {
     resumeFileInput.value = '';
     dropzoneFilled.classList.add('hidden');
     dropzoneEmpty.classList.remove('hidden');
+    if (resumeParsedBadge) resumeParsedBadge.classList.add('hidden');
+    cachedResumeDraft = null;
     showToast('Resume attachment removed.', 'info');
   });
+
+  async function extractResumeProfile(file = null) {
+    try {
+      const formData = new FormData();
+      if (file) {
+        formData.append('resume', file);
+      }
+
+      const res = await fetch(`${API_BASE}/api/extract-resume`, {
+        method: 'POST',
+        body: file ? formData : undefined
+      });
+      const data = await res.json();
+      if (data.success && data.candidate) {
+        cachedResumeDraft = data.suggested;
+
+        // Auto-fill fields if not already typed or if new file
+        if (data.suggested.senderName) {
+          senderNameInput.value = data.suggested.senderName;
+        }
+        if (data.suggested.subject) {
+          emailSubjectInput.value = data.suggested.subject;
+        }
+        if (data.suggested.message) {
+          emailMessageInput.value = data.suggested.message;
+        }
+
+        // Show parsed badge card
+        if (resumeParsedBadge) {
+          if (parsedCandidateName) parsedCandidateName.textContent = data.candidate.name || 'Candidate';
+          const contactParts = [];
+          if (data.candidate.email) contactParts.push(data.candidate.email);
+          if (data.candidate.phone) contactParts.push(data.candidate.phone);
+          if (parsedCandidateContact) parsedCandidateContact.textContent = contactParts.join(' • ');
+
+          if (parsedCandidateSkills) {
+            parsedCandidateSkills.innerHTML = '';
+            (data.candidate.skills || []).forEach(skill => {
+              const pill = document.createElement('span');
+              pill.className = 'skill-pill';
+              pill.textContent = skill;
+              parsedCandidateSkills.appendChild(pill);
+            });
+          }
+          resumeParsedBadge.classList.remove('hidden');
+        }
+
+        showToast(`✨ Resume parsed for ${data.candidate.name}! Pitch auto-drafted.`, 'success');
+      }
+    } catch (err) {
+      console.warn('Resume extraction note:', err);
+    }
+  }
+
+  if (reapplyDraftBtn) {
+    reapplyDraftBtn.addEventListener('click', () => {
+      if (cachedResumeDraft) {
+        senderNameInput.value = cachedResumeDraft.senderName || senderNameInput.value;
+        emailSubjectInput.value = cachedResumeDraft.subject || emailSubjectInput.value;
+        emailMessageInput.value = cachedResumeDraft.message || emailMessageInput.value;
+        showToast('Auto-generated pitch re-applied to form!', 'info');
+      }
+    });
+  }
 
   function handleResumeSelection(file) {
     if (!file) return;
@@ -195,6 +287,9 @@ document.addEventListener('DOMContentLoaded', () => {
     dropzoneEmpty.classList.add('hidden');
     dropzoneFilled.classList.remove('hidden');
     showToast(`Attached: ${file.name}`, 'success');
+
+    // Auto-parse candidate details and pitch
+    extractResumeProfile(file);
   }
 
   async function checkDefaultResume() {
@@ -207,6 +302,8 @@ document.addEventListener('DOMContentLoaded', () => {
         dropzoneEmpty.classList.add('hidden');
         dropzoneFilled.classList.remove('hidden');
         hasPreloadedResume = true;
+        // Auto-extract candidate profile from preloaded resume
+        extractResumeProfile();
       }
     } catch (e) {}
   }
@@ -250,6 +347,9 @@ document.addEventListener('DOMContentLoaded', () => {
       activeTab = btn.getAttribute('data-tab');
       document.getElementById(activeTab).classList.add('active');
       updateSendButtonCount();
+      if (activeTab === 'vaultTab') {
+        loadVaultData();
+      }
     });
   });
 
@@ -650,16 +750,10 @@ document.addEventListener('DOMContentLoaded', () => {
       const data = await res.json();
 
       if (data.success && data.contacts && data.contacts.length > 0) {
-        importStatusText.textContent = `Found ${data.count} contacts! Saving to database...`;
-
-        await fetch(`${API_BASE}/api/contacts`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ contacts: data.contacts, overwrite: false })
-        });
-
-        showToast(`Successfully extracted ${data.count} HR contacts!`, 'success');
+        importStatusText.textContent = `Extracted ${data.count} contacts! Database updated...`;
+        showToast(`Extracted ${data.count} HR contacts! Assigned to ${data.docLabel}.`, 'success');
         await loadSavedContacts();
+        await loadVaultData();
         tabBtns[0].click();
       } else {
         showToast(data.error || 'No email contacts could be extracted from this PDF.', 'error');
@@ -779,6 +873,7 @@ document.addEventListener('DOMContentLoaded', () => {
       `Proceed with Autopilot?`;
 
     if (!confirm(confirmMsg)) return;
+    hasPromptedCleanup = false;
 
     const formData = new FormData();
     if (resumeFile) {
@@ -921,6 +1016,10 @@ document.addEventListener('DOMContentLoaded', () => {
       pauseCampaignBtn.classList.add('hidden');
       resumeCampaignBtn.classList.add('hidden');
       countdownContainer.classList.add('hidden');
+      if (!hasPromptedCleanup) {
+        hasPromptedCleanup = true;
+        showCleanupModal();
+      }
     }
 
     // Update Metrics
@@ -1034,11 +1133,198 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // -------------------------------------------------------------
+  // 11. Source Document Vault Controller
+  // -------------------------------------------------------------
+  async function loadVaultData() {
+    try {
+      const res = await fetch(`${API_BASE}/api/campaign/vault`);
+      const data = await res.json();
+      if (!data.success) return;
+
+      cachedVaultData = data.vault || [];
+      if (vaultTotalBadge) vaultTotalBadge.textContent = data.totalDelivered || 0;
+      if (vaultTotalDelivered) vaultTotalDelivered.textContent = data.totalDelivered || 0;
+      if (vaultTotalDocs) vaultTotalDocs.textContent = data.totalDocuments || 0;
+
+      const currentQuery = vaultSearchInput ? vaultSearchInput.value : '';
+      renderVaultList(currentQuery);
+    } catch (err) {
+      console.error('Failed to load vault data:', err);
+    }
+  }
+
+  function renderVaultList(searchQuery = '') {
+    if (!vaultListContainer) return;
+    const query = searchQuery.toLowerCase().trim();
+
+    let filtered = cachedVaultData;
+    if (query) {
+      filtered = cachedVaultData.map(doc => {
+        const matchingContacts = (doc.contacts || []).filter(c =>
+          (c.name || '').toLowerCase().includes(query) ||
+          (c.company || '').toLowerCase().includes(query) ||
+          (c.email || '').toLowerCase().includes(query)
+        );
+        const matchesDocHeader = (doc.label || '').toLowerCase().includes(query) ||
+                                (doc.filename || '').toLowerCase().includes(query);
+        if (matchesDocHeader) return doc;
+        if (matchingContacts.length > 0) {
+          return { ...doc, contacts: matchingContacts };
+        }
+        return null;
+      }).filter(Boolean);
+    }
+
+    if (!filtered || filtered.length === 0) {
+      vaultListContainer.innerHTML = '<div class="empty-state">No matching documents or delivered contacts found in vault.</div>';
+      return;
+    }
+
+    vaultListContainer.innerHTML = '';
+
+    filtered.forEach((doc, idx) => {
+      const card = document.createElement('div');
+      card.className = `vault-doc-card ${idx === 0 ? 'expanded' : ''}`;
+
+      const dateStr = doc.uploadedAt ? new Date(doc.uploadedAt).toLocaleDateString(undefined, {
+        month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit'
+      }) : 'Past batch';
+
+      const contactsCount = (doc.contacts || []).length;
+      const sentCount = doc.totalSent || contactsCount;
+
+      card.innerHTML = `
+        <div class="vault-card-header">
+          <span class="vault-badge">${escapeHtml(doc.label || 'PDF')}</span>
+          <div class="vault-title-wrap">
+            <div class="vault-doc-title">${escapeHtml(doc.filename || 'HR Document')}</div>
+            <div class="vault-doc-meta">${dateStr}</div>
+          </div>
+          <div class="vault-card-stats">
+            <span class="vault-tag-sent">✅ ${sentCount} Sent</span>
+            <span class="vault-tag-companies">🏢 ${doc.uniqueCompaniesCount || 0} Companies</span>
+          </div>
+          <span class="vault-chevron">▼</span>
+        </div>
+        <div class="vault-card-body">
+          <div class="vault-table-wrap">
+            <table class="vault-table">
+              <thead>
+                <tr>
+                  <th>Status</th>
+                  <th>Recruiter Name</th>
+                  <th>Email</th>
+                  <th>Company</th>
+                  <th>Delivered At</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${(doc.contacts || []).map(c => `
+                  <tr>
+                    <td><span class="table-status-badge sent">Sent</span></td>
+                    <td><strong>${escapeHtml(c.name || 'Hiring Manager')}</strong></td>
+                    <td class="col-mono">${escapeHtml(c.email || '')}</td>
+                    <td>${escapeHtml(c.company || '—')}</td>
+                    <td>${c.timestamp ? new Date(c.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Delivered'}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      `;
+
+      const header = card.querySelector('.vault-card-header');
+      header.addEventListener('click', () => {
+        card.classList.toggle('expanded');
+      });
+
+      vaultListContainer.appendChild(card);
+    });
+  }
+
+  if (vaultSearchInput) {
+    vaultSearchInput.addEventListener('input', (e) => {
+      renderVaultList(e.target.value);
+    });
+  }
+
+  if (refreshVaultBtn) {
+    refreshVaultBtn.addEventListener('click', async () => {
+      await loadVaultData();
+      showToast('Vault refreshed!', 'info');
+    });
+  }
+
+  // -------------------------------------------------------------
+  // 12. Modular Post-Campaign Cleanup Modal
+  // -------------------------------------------------------------
+  function showCleanupModal() {
+    if (cleanupModal) {
+      cleanupModal.classList.remove('hidden');
+    }
+  }
+
+  function hideCleanupModal() {
+    if (cleanupModal) {
+      cleanupModal.classList.add('hidden');
+    }
+  }
+
+  if (cleanupDismissBtn) {
+    cleanupDismissBtn.addEventListener('click', hideCleanupModal);
+  }
+
+  if (cleanupConfirmBtn) {
+    cleanupConfirmBtn.addEventListener('click', async () => {
+      const clearContacts = cleanupClearContactsCheckbox ? cleanupClearContactsCheckbox.checked : false;
+      const clearResume = cleanupClearResumeCheckbox ? cleanupClearResumeCheckbox.checked : false;
+
+      cleanupConfirmBtn.disabled = true;
+      cleanupConfirmBtn.textContent = 'Cleaning Up...';
+
+      try {
+        const res = await fetch(`${API_BASE}/api/campaign/cleanup`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            clearContacts,
+            clearResume,
+            resetCampaignState: true
+          })
+        });
+        const data = await res.json();
+        if (data.success) {
+          showToast('Clean up completed! Ready for your next HR list.', 'success');
+          if (clearContacts) {
+            allContacts = [];
+            selectedContactEmails.clear();
+            await loadSavedContacts();
+          }
+          if (clearResume) {
+            if (removeFileBtn) removeFileBtn.click();
+          }
+          await loadVaultData();
+          hideCleanupModal();
+        } else {
+          showToast(data.error || 'Cleanup failed.', 'error');
+        }
+      } catch (err) {
+        showToast('Cleanup failed: ' + err.message, 'error');
+      } finally {
+        cleanupConfirmBtn.disabled = false;
+        cleanupConfirmBtn.textContent = 'Apply Clean Up';
+      }
+    });
+  }
+
+  // -------------------------------------------------------------
   // Initial Boot
   // -------------------------------------------------------------
   verifySmtpConnection();
   checkDefaultResume();
   loadSavedContacts();
+  loadVaultData();
   updateManualDetectedCount();
   startCampaignPolling(); // Immediately syncs if campaign already running on backend!
 });

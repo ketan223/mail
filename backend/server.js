@@ -23,6 +23,7 @@ if (!fs.existsSync(DATA_DIR)) {
 const CONTACTS_FILE = path.join(DATA_DIR, 'hr_contacts.json');
 const SENT_LOG_FILE = path.join(DATA_DIR, 'sent_log.json');
 const CAMPAIGN_STATE_FILE = path.join(DATA_DIR, 'campaign_state.json');
+const VAULT_METADATA_FILE = path.join(DATA_DIR, 'vault_history.json');
 
 // Initialize files if they don't exist
 if (!fs.existsSync(CONTACTS_FILE)) {
@@ -30,6 +31,43 @@ if (!fs.existsSync(CONTACTS_FILE)) {
 }
 if (!fs.existsSync(SENT_LOG_FILE)) {
   fs.writeFileSync(SENT_LOG_FILE, JSON.stringify([], null, 2), 'utf8');
+}
+if (!fs.existsSync(VAULT_METADATA_FILE)) {
+  fs.writeFileSync(VAULT_METADATA_FILE, JSON.stringify([], null, 2), 'utf8');
+}
+
+// Vault history helper with auto-seeding of initial campaigns
+function getVaultHistory() {
+  if (!fs.existsSync(VAULT_METADATA_FILE)) {
+    fs.writeFileSync(VAULT_METADATA_FILE, JSON.stringify([], null, 2), 'utf8');
+  }
+  try {
+    let list = JSON.parse(fs.readFileSync(VAULT_METADATA_FILE, 'utf8') || '[]');
+    if (list.length === 0) {
+      let sentHistory = [];
+      if (fs.existsSync(SENT_LOG_FILE)) {
+        sentHistory = JSON.parse(fs.readFileSync(SENT_LOG_FILE, 'utf8') || '[]');
+      }
+      const sentCount = sentHistory.filter(s => s.status === 'sent').length;
+      if (sentCount > 0) {
+        const initialDoc = {
+          id: 'pdf-1',
+          docNum: 1,
+          label: 'PDF 1',
+          filename: 'Initial HR Database',
+          sourceDoc: 'PDF 1: Initial HR Database',
+          uploadedAt: '2026-09-05T10:00:00.000Z',
+          totalExtracted: 1528,
+          totalSent: sentCount
+        };
+        list.push(initialDoc);
+        fs.writeFileSync(VAULT_METADATA_FILE, JSON.stringify(list, null, 2), 'utf8');
+      }
+    }
+    return list;
+  } catch (e) {
+    return [];
+  }
 }
 
 // Middleware
@@ -85,6 +123,8 @@ const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
 
 // Helper to find preloaded default resume
 const getDefaultResumePath = () => {
+  const pActive = path.join(DATA_DIR, 'active_resume.pdf');
+  if (fs.existsSync(pActive)) return pActive;
   const p1 = path.join(__dirname, '../Ketan_Resume.pdf');
   if (fs.existsSync(p1)) return p1;
   const p2 = path.join(__dirname, 'Ketan_Resume.pdf');
@@ -281,6 +321,9 @@ class CampaignEngine {
   // Append a log entry to disk (deduplicating by email)
   logResult(entry) {
     entry.timestamp = new Date().toISOString();
+    if (!entry.sourceDoc) {
+      entry.sourceDoc = 'PDF 1: Initial HR Database';
+    }
     this.recentLogs.unshift(entry);
     if (this.recentLogs.length > 100) this.recentLogs.pop();
 
@@ -292,6 +335,9 @@ class CampaignEngine {
       const cleanEmail = (entry.email || '').toLowerCase().trim();
       const existingIdx = history.findIndex(h => (h.email || '').toLowerCase().trim() === cleanEmail);
       if (existingIdx >= 0) {
+        if (!entry.sourceDoc && history[existingIdx].sourceDoc) {
+          entry.sourceDoc = history[existingIdx].sourceDoc;
+        }
         history[existingIdx] = entry;
       } else {
         history.push(entry);
@@ -392,6 +438,7 @@ class CampaignEngine {
       const email = (r.email || '').toLowerCase().trim();
       const displayName = r.name || 'Hiring Manager';
       const displayCompany = r.company || 'your team';
+      const sourceDoc = r.sourceDoc || 'PDF 1: Initial HR Database';
 
       // 1. Deep Pre-flight Validation: DNS MX + Mailbox Verification (RCPT TO)
       const mailboxCheck = await verifyMailboxExists(email);
@@ -402,6 +449,7 @@ class CampaignEngine {
           email: email,
           name: displayName,
           company: displayCompany,
+          sourceDoc: sourceDoc,
           status: 'skipped_invalid_domain',
           error: mailboxCheck.reason || 'Mailbox deactivated or domain has no MX mail server.'
         });
@@ -448,6 +496,7 @@ class CampaignEngine {
           email: email,
           name: displayName,
           company: displayCompany,
+          sourceDoc: sourceDoc,
           status: 'sent',
           messageId: info.messageId
         });
@@ -458,6 +507,7 @@ class CampaignEngine {
           email: email,
           name: displayName,
           company: displayCompany,
+          sourceDoc: sourceDoc,
           status: 'failed',
           error: err.message
         });
@@ -622,6 +672,29 @@ class CampaignEngine {
       stats: this.stats,
       recentLogs: this.recentLogs.slice(0, 30)
     };
+  }
+
+  // Reset engine to clean idle state
+  reset() {
+    if (this.timerId) {
+      clearTimeout(this.timerId);
+      this.timerId = null;
+    }
+    this.status = 'idle';
+    this.queue = [];
+    this.currentBatchNumber = 0;
+    this.sentInCurrentBatch = 0;
+    this.totalBatches = 0;
+    this.nextBatchRunTime = null;
+    this.isCancelled = false;
+    this.activePayload = null;
+    this.stats = {
+      totalQueued: 0,
+      sent: 0,
+      failed: 0,
+      skippedMx: 0
+    };
+    this.saveState();
   }
 }
 
@@ -971,7 +1044,106 @@ app.post('/api/auto-sync-gmail-bounces', async (req, res) => {
   }
 });
 
-// Extract contacts from uploaded HR PDF
+// Extract candidate details from uploaded Resume PDF
+app.post('/api/extract-resume', upload.single('resume'), async (req, res) => {
+  try {
+    let buffer = null;
+    let originalName = 'Resume.pdf';
+
+    if (req.file) {
+      buffer = req.file.buffer;
+      originalName = req.file.originalname;
+    } else {
+      const defaultPath = getDefaultResumePath();
+      if (defaultPath && fs.existsSync(defaultPath)) {
+        buffer = fs.readFileSync(defaultPath);
+        originalName = path.basename(defaultPath);
+      }
+    }
+
+    if (!buffer) {
+      return res.status(400).json({ error: 'No resume PDF provided.' });
+    }
+
+    // Persist as active_resume.pdf for zero-manual campaign runs
+    const activeResumePath = path.join(DATA_DIR, 'active_resume.pdf');
+    fs.writeFileSync(activeResumePath, buffer);
+
+    const parsedData = await pdfParse(buffer);
+    const text = parsedData.text || '';
+    const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+
+    let candidateName = 'Ketan Tiwari';
+    for (let i = 0; i < Math.min(15, lines.length); i++) {
+      const l = lines[i];
+      if (/resume|curriculum|vitae|education|profile|portfolio|linkedin|github/i.test(l)) continue;
+      if (l.includes('@') || /^\+?\d/.test(l) || l.length > 35) continue;
+      if (/^[A-Za-z\s.]{3,30}$/.test(l)) {
+        candidateName = l.trim();
+        break;
+      }
+    }
+
+    const emailMatch = text.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/i);
+    const candidateEmail = emailMatch ? emailMatch[0].trim() : 'tiwariketan045@gmail.com';
+    const phoneMatch = text.match(/(?:\+?91[\s-]?)?[6-9]\d{9}|(?:\+?\d{1,3}[\s-]?)?\(?\d{3,4}\)?[\s-]?\d{3,4}[\s-]?\d{3,4}/);
+    const candidatePhone = phoneMatch ? phoneMatch[0].trim() : '';
+
+    const skillKeywords = [
+      'Generative AI', 'Full-Stack', 'Large Language', 'LLM', 'RAG', 'Python', 'Node.js', 'React', 'Next.js',
+      'FastAPI', 'Express', 'TypeScript', 'JavaScript', 'Docker', 'Kubernetes', 'AWS',
+      'PostgreSQL', 'NoSQL', 'MongoDB', 'LangChain', 'LlamaIndex', 'Machine Learning', 'Deep Learning',
+      'PyTorch', 'TensorFlow', 'REST APIs', 'GraphQL', 'Java', 'Git'
+    ];
+    const detectedSkills = [];
+    for (const skill of skillKeywords) {
+      if (new RegExp('\\b' + skill.toLowerCase() + '\\b', 'i').test(text.toLowerCase())) {
+        detectedSkills.push(skill === 'Large Language' ? 'LLMs' : skill);
+      }
+    }
+
+    const primarySkills = detectedSkills.length > 0 ? detectedSkills.slice(0, 5) : ['Full-Stack', 'Generative AI', 'LLM/RAG', 'Python', 'Node.js'];
+    const skillsString = primarySkills.join(', ');
+
+    const suggestedSubject = `Application: Software Engineering & AI Intern - ${candidateName} - {{company}}`;
+    const suggestedMessage = `Dear {{name}},
+
+I hope you are doing well.
+
+I am writing to inquire about Software Engineering and AI/ML Internship opportunities at {{company}}.
+
+I am a passionate developer with hands-on experience in ${skillsString}. I have built production-ready full-stack applications, autonomous agentic workflows, scalable backend services, and modern AI/LLM pipelines. I am keen to join {{company}} as an engineering intern to contribute directly to impactful projects and learn from your talented engineering team.
+
+Please find my resume attached for your review. I would welcome the opportunity for a brief conversation to discuss how I can add value to your team.
+
+Thank you for your time and consideration.
+
+Best regards,
+${candidateName}
+${candidateEmail}
+${candidatePhone}`.trim();
+
+    res.json({
+      success: true,
+      filename: originalName,
+      candidate: {
+        name: candidateName,
+        email: candidateEmail,
+        phone: candidatePhone,
+        skills: detectedSkills
+      },
+      suggested: {
+        senderName: candidateName,
+        subject: suggestedSubject,
+        message: suggestedMessage
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to extract resume details: ' + err.message });
+  }
+});
+
+// Extract contacts from uploaded HR PDF & auto-save to queue with source tracking
 app.post('/api/extract-contacts', upload.single('pdf'), async (req, res) => {
   try {
     if (!req.file) {
@@ -981,11 +1153,32 @@ app.post('/api/extract-contacts', upload.single('pdf'), async (req, res) => {
     const parsedData = await pdfParse(req.file.buffer);
     const text = parsedData.text || '';
     
+    // Vault tracking
+    const vaultList = getVaultHistory();
+    const nextDocNum = vaultList.length + 1;
+    const docLabel = `PDF ${nextDocNum}`;
+    const sourceDoc = `${docLabel}: ${req.file.originalname}`;
+
     // Parse contacts from text
     const lines = text.split('\n');
     const contacts = [];
     const seenEmails = new Set();
     const inlineEmailRegex = /([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/i;
+
+    const knownCorps = {
+      'tcs': 'TCS',
+      'ibm': 'IBM',
+      'hcl': 'HCL Technologies',
+      'wipro': 'Wipro',
+      'infosys': 'Infosys',
+      'cognizant': 'Cognizant',
+      'capgemini': 'Capgemini',
+      'accenture': 'Accenture',
+      'amazon': 'Amazon',
+      'google': 'Google',
+      'microsoft': 'Microsoft',
+      'oracle': 'Oracle'
+    };
 
     for (let rawLine of lines) {
       const line = rawLine.trim();
@@ -1000,24 +1193,82 @@ app.post('/api/extract-contacts', upload.single('pdf'), async (req, res) => {
       const beforeEmail = line.substring(0, emailIdx).trim();
       const afterEmail = line.substring(emailIdx + match[0].length).trim();
 
-      let name = beforeEmail.replace(/^\d+\s+/, '').trim();
+      let name = beforeEmail.replace(/^\d+[\s.-]+/, '').trim();
       if (!name) {
         name = email.split('@')[0].replace(/[._]/g, ' ');
+      }
+
+      let company = '';
+      const domainParts = email.split('@')[1].split('.');
+      if (domainParts.length >= 2) {
+        const mainDomain = domainParts[0].toLowerCase();
+        if (knownCorps[mainDomain]) {
+          company = knownCorps[mainDomain];
+        } else if (!['gmail', 'yahoo', 'outlook', 'hotmail', 'rediffmail', 'protonmail', 'icloud'].includes(mainDomain)) {
+          company = mainDomain.charAt(0).toUpperCase() + mainDomain.slice(1);
+        }
       }
 
       contacts.push({
         email,
         name,
-        title: afterEmail,
-        company: ''
+        title: afterEmail || 'HR / Talent Partner',
+        company: company || 'your team',
+        sourceDoc: sourceDoc
       });
       seenEmails.add(email);
     }
 
+    // Auto-save & merge to CONTACTS_FILE (Zero-manual step)
+    let existingContacts = [];
+    if (fs.existsSync(CONTACTS_FILE)) {
+      try {
+        existingContacts = JSON.parse(fs.readFileSync(CONTACTS_FILE, 'utf8') || '[]');
+      } catch (e) {
+        existingContacts = [];
+      }
+    }
+    const existingEmails = new Set(existingContacts.map(c => (c.email || '').toLowerCase().trim()));
+    let addedCount = 0;
+
+    for (const c of contacts) {
+      if (!existingEmails.has(c.email)) {
+        existingContacts.push({
+          id: existingContacts.length + 1,
+          name: c.name,
+          email: c.email,
+          title: c.title,
+          company: c.company,
+          sourceDoc: c.sourceDoc
+        });
+        existingEmails.add(c.email);
+        addedCount++;
+      }
+    }
+
+    fs.writeFileSync(CONTACTS_FILE, JSON.stringify(existingContacts, null, 2), 'utf8');
+
+    // Record document in vault metadata
+    vaultList.push({
+      id: `pdf-${nextDocNum}`,
+      docNum: nextDocNum,
+      label: docLabel,
+      filename: req.file.originalname,
+      sourceDoc: sourceDoc,
+      uploadedAt: new Date().toISOString(),
+      totalExtracted: contacts.length,
+      totalSent: 0
+    });
+    fs.writeFileSync(VAULT_METADATA_FILE, JSON.stringify(vaultList, null, 2), 'utf8');
+
     res.json({
       success: true,
       pages: parsedData.numpages,
+      sourceDoc: sourceDoc,
+      docLabel: docLabel,
       count: contacts.length,
+      addedCount: addedCount,
+      totalInDb: existingContacts.length,
       contacts: contacts
     });
   } catch (err) {
@@ -1032,7 +1283,7 @@ app.get('/api/default-resume', (req, res) => {
     const stat = fs.statSync(defaultPath);
     return res.json({
       exists: true,
-      filename: 'Ketan_Resume.pdf',
+      filename: path.basename(defaultPath),
       size: stat.size
     });
   }
@@ -1173,6 +1424,137 @@ app.post('/api/campaign/update-config', (req, res) => {
 // Get campaign status (polled by frontend)
 app.get('/api/campaign/status', (req, res) => {
   res.json(campaignEngine.getStatus());
+});
+
+// Retrieve Source History Vault (All delivered HRs grouped by original PDF document)
+app.get('/api/campaign/vault', (req, res) => {
+  try {
+    const vaultDocs = getVaultHistory();
+    let sentLog = [];
+    if (fs.existsSync(SENT_LOG_FILE)) {
+      sentLog = JSON.parse(fs.readFileSync(SENT_LOG_FILE, 'utf8') || '[]');
+    }
+
+    const sentOnly = sentLog.filter(s => s.status === 'sent');
+    const docMap = new Map();
+
+    // Initialize map from known vault documents
+    for (const doc of vaultDocs) {
+      docMap.set(doc.sourceDoc, {
+        id: doc.id,
+        label: doc.label,
+        filename: doc.filename,
+        sourceDoc: doc.sourceDoc,
+        uploadedAt: doc.uploadedAt,
+        totalSent: 0,
+        companies: new Set(),
+        contacts: []
+      });
+    }
+
+    // Default group for initial campaign
+    const defaultSourceDoc = 'PDF 1: Initial HR Database';
+    if (!docMap.has(defaultSourceDoc)) {
+      docMap.set(defaultSourceDoc, {
+        id: 'pdf-1',
+        label: 'PDF 1',
+        filename: 'Initial HR Database',
+        sourceDoc: defaultSourceDoc,
+        uploadedAt: '2026-09-05T10:00:00.000Z',
+        totalSent: 0,
+        companies: new Set(),
+        contacts: []
+      });
+    }
+
+    // Group sent contacts by sourceDoc
+    for (const item of sentOnly) {
+      const src = item.sourceDoc || defaultSourceDoc;
+      if (!docMap.has(src)) {
+        docMap.set(src, {
+          id: `pdf-custom-${docMap.size + 1}`,
+          label: src.split(':')[0] || 'PDF',
+          filename: src.split(':')[1] ? src.split(':')[1].trim() : src,
+          sourceDoc: src,
+          uploadedAt: item.timestamp || new Date().toISOString(),
+          totalSent: 0,
+          companies: new Set(),
+          contacts: []
+        });
+      }
+
+      const group = docMap.get(src);
+      group.totalSent++;
+      if (item.company) group.companies.add(item.company);
+      group.contacts.push({
+        email: item.email,
+        name: item.name || '',
+        company: item.company || '',
+        status: item.status,
+        timestamp: item.timestamp,
+        messageId: item.messageId
+      });
+    }
+
+    const vaultGroups = Array.from(docMap.values()).map(g => ({
+      id: g.id,
+      label: g.label,
+      filename: g.filename,
+      sourceDoc: g.sourceDoc,
+      uploadedAt: g.uploadedAt,
+      totalSent: g.totalSent,
+      uniqueCompaniesCount: g.companies.size,
+      contacts: g.contacts
+    }));
+
+    res.json({
+      success: true,
+      totalDelivered: sentOnly.length,
+      totalDocuments: vaultGroups.length,
+      vault: vaultGroups
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to retrieve vault: ' + err.message });
+  }
+});
+
+// Modular Post-Campaign Cleanup Endpoint
+app.post('/api/campaign/cleanup', (req, res) => {
+  try {
+    const { clearContacts, clearResume, resetCampaignState } = req.body;
+    const actionsDone = [];
+
+    // 1. Modular option: Clear active HR contacts queue
+    if (clearContacts) {
+      fs.writeFileSync(CONTACTS_FILE, JSON.stringify([], null, 2), 'utf8');
+      actionsDone.push('Active HR contacts queue cleared');
+    }
+
+    // 2. Modular option: Clear uploaded resume
+    if (clearResume) {
+      const activeResumePath = path.join(DATA_DIR, 'active_resume.pdf');
+      if (fs.existsSync(activeResumePath)) {
+        fs.unlinkSync(activeResumePath);
+        actionsDone.push('Uploaded active resume removed');
+      }
+      if (campaignEngine.activePayload) {
+        campaignEngine.activePayload.resume = null;
+      }
+    }
+
+    // 3. Reset Campaign State to idle
+    if (resetCampaignState || clearContacts) {
+      campaignEngine.reset();
+      actionsDone.push('Campaign state reset to idle');
+    }
+
+    res.json({
+      success: true,
+      message: actionsDone.join(', ') || 'No actions performed.'
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Cleanup failed: ' + err.message });
+  }
 });
 
 // Legacy POST /api/send (with DNS MX pre-check)

@@ -1,0 +1,12 @@
+[
+  {
+    "id": "pdf-1",
+    "docNum": 1,
+    "label": "PDF 1",
+    "filename": "Initial HR Database",
+    "sourceDoc": "PDF 1: Initial HR Database",
+    "uploadedAt": "2026-09-05T10:00:00.000Z",
+    "totalExtracted": 1528,
+    "totalSent": 653
+  }
+]

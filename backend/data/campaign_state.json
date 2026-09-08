@@ -1,18 +1,18 @@
 {
-  "status": "running_batch",
+  "status": "idle",
   "batchSize": 50,
   "pauseDurationMs": 1800000,
-  "currentBatchNumber": 21,
-  "sentInCurrentBatch": 2,
-  "totalBatches": 22,
+  "currentBatchNumber": 0,
+  "sentInCurrentBatch": 0,
+  "totalBatches": 0,
   "nextBatchRunTime": null,
   "stats": {
-    "totalQueued": 1528,
-    "sent": 495,
-    "failed": 1,
-    "skippedMx": 989
+    "totalQueued": 0,
+    "sent": 0,
+    "failed": 0,
+    "skippedMx": 0
   },
-  "senderName": "Ketan Tiwari",
-  "subject": "Application: Software Engineering & AI Intern - Ketan Tiwari - {{company}}",
-  "message": "Dear {{name}},\r\n\r\nI hope you are doing well.\r\n\r\nI am writing to inquire about Software Engineering and AI Internship opportunities at {{company}}.\r\n\r\nI am a Full-Stack & Generative AI Engineer with hands-on experience building production-ready LLM/RAG pipelines, autonomous agentic workflows, scalable backend APIs, and modern web applications. I am keen to join {{company}} as an engineering intern to contribute directly to impactful projects and learn from your talented engineering team.\r\n\r\nPlease find my resume attached for your review. I would welcome the opportunity for a brief conversation to discuss how I can add value to your team.\r\n\r\nThank you for your time and consideration.\r\n\r\nBest regards,\r\nKetan Tiwari\r\ntiwariketan045@gmail.com"
+  "senderName": "",
+  "subject": "",
+  "message": ""
 }
