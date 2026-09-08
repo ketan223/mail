@@ -1635,3 +1635,126 @@ textarea {
   opacity: 0.92;
 }
 
+/* =========================================================
+   Dropzone Actions & Resume Controls
+   ========================================================= */
+.dropzone-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* =========================================================
+   Bracket Explainer Banner (Template Placeholders)
+   ========================================================= */
+.bracket-explainer-banner {
+  margin-top: 8px;
+  background: rgba(245, 158, 11, 0.08);
+  border: 1px solid rgba(245, 158, 11, 0.25);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+}
+
+.explainer-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
+.explainer-icon {
+  font-size: 15px;
+}
+
+.explainer-title {
+  font-size: 12px;
+  color: #fbbf24;
+}
+
+.explainer-text {
+  font-size: 11px;
+  color: var(--text-secondary);
+  line-height: 1.45;
+  margin: 0 0 8px 0;
+}
+
+.explainer-text code {
+  background-color: rgba(255, 255, 255, 0.1);
+  padding: 1px 4px;
+  border-radius: 3px;
+  color: #60a5fa;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+}
+
+.explainer-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* =========================================================
+   Prominent Always-Visible HR Contacts PDF Upload Banner
+   ========================================================= */
+.hr-pdf-upload-banner {
+  margin-bottom: 14px;
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.12) 0%, rgba(16, 185, 129, 0.1) 100%);
+  border: 2px dashed rgba(59, 130, 246, 0.4);
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.hr-pdf-upload-banner:hover,
+.hr-pdf-upload-banner.dragover {
+  border-color: #3b82f6;
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.2) 0%, rgba(16, 185, 129, 0.15) 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+}
+
+.hr-banner-main {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.hr-banner-icon {
+  font-size: 28px;
+  background: rgba(59, 130, 246, 0.15);
+  border-radius: 50%;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.hr-banner-text {
+  flex: 1;
+}
+
+.hr-banner-title {
+  display: block;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 2px;
+}
+
+.hr-banner-desc {
+  font-size: 11.5px;
+  color: var(--text-muted);
+  line-height: 1.4;
+  margin: 0;
+}
+
+.hr-banner-main .btn-primary {
+  flex-shrink: 0;
+  padding: 8px 16px;
+  font-size: 12.5px;
+}
+
+

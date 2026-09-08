@@ -43,7 +43,10 @@
 
         <!-- Resume Attachment Zone -->
         <div class="form-group">
-          <label>Resume PDF Attachment <span class="required">*</span> <span class="hint">(Max 10MB, PDF only)</span></label>
+          <div class="label-with-actions">
+            <label>Resume PDF Attachment <span class="required">*</span> <span class="hint">(Max 10MB, PDF)</span></label>
+            <button type="button" class="btn-link" id="uploadDifferentResumeBtn">📤 Upload Different Resume</button>
+          </div>
           <div id="resumeDropzone" class="dropzone">
             <input type="file" id="resumeFileInput" accept=".pdf,application/pdf" hidden>
             <div class="dropzone-empty" id="dropzoneEmpty">
@@ -59,7 +62,11 @@
                   <div class="file-size" id="fileSizeDisplay">0 KB</div>
                 </div>
               </div>
-              <button type="button" class="btn-icon-danger" id="removeFileBtn" title="Remove PDF">✕</button>
+              <div class="dropzone-actions">
+                <button type="button" class="btn-tiny btn-subtle" id="changeResumeBtn">🔄 Change Resume</button>
+                <button type="button" class="btn-icon-danger" id="removeFileBtn" title="Remove PDF">✕</button>
+              </div>
+            </div>
           </div>
           <!-- Auto-Extracted Resume Profile Card -->
           <div id="resumeParsedBadge" class="resume-parsed-card hidden">
@@ -116,6 +123,21 @@ Thank you for your time and consideration.
 Best regards,
 Ketan Tiwari
 tiwariketan045@gmail.com</textarea>
+
+          <!-- Template Tag / Bracket Helper Banner -->
+          <div class="bracket-explainer-banner">
+            <div class="explainer-header">
+              <span class="explainer-icon">💡</span>
+              <span class="explainer-title"><strong>Bracket ({{name}}, {{company}}) ka kya matlab hai?</strong></span>
+            </div>
+            <p class="explainer-text">
+              Yeh brackets HR ko <strong>bilkul nahi jaate</strong>! Email bhejte waqt system automatically har HR ke liye unka real name (e.g. <em>Dear Rekha</em>) aur unki company (e.g. <em>Zaggle</em>) replace kar deta hai.
+            </p>
+            <div class="explainer-actions">
+              <button type="button" class="btn-tiny" id="removeBracketsBtn" title="Use plain generic text with zero brackets">🚫 Remove All Brackets (Clean Plain Text)</button>
+              <button type="button" class="btn-tiny btn-subtle" id="restoreBracketsBtn" title="Restore personalized {{name}} and {{company}} tags">✨ Use Dynamic {{name}} & {{company}}</button>
+            </div>
+          </div>
         </div>
 
         <!-- Autopilot Campaign Controls -->
@@ -201,12 +223,28 @@ tiwariketan045@gmail.com</textarea>
           <span class="badge-accent">Step 2</span>
         </div>
 
-        <!-- Tabs: Manual / Extracted List / Vault -->
+        <!-- ALWAYS-VISIBLE PROMINENT HR PDF UPLOAD BANNER -->
+        <div class="hr-pdf-upload-banner" id="hrPdfQuickBanner">
+          <div class="hr-banner-main">
+            <div class="hr-banner-icon">📥</div>
+            <div class="hr-banner-text">
+              <strong class="hr-banner-title">Upload HR Contacts PDF Document</strong>
+              <p class="hr-banner-desc">Drag & drop your recruiter list PDF here, or click to browse. Recruiter names, emails & companies are auto-parsed into your queue instantly!</p>
+            </div>
+            <button type="button" class="btn-primary" id="quickUploadHrPdfBtn">📂 Select HR PDF</button>
+            <input type="file" id="quickHrPdfInput" accept=".pdf,application/pdf" hidden>
+          </div>
+          <div class="import-status-area hidden" id="quickImportStatusArea">
+            <div class="spinner"></div>
+            <span id="quickImportStatusText">Parsing document and extracting contacts...</span>
+          </div>
+        </div>
+
+        <!-- Tabs: Active HR List / Document Vault / Manual Raw Emails -->
         <div class="tabs-nav">
-          <button class="tab-btn active" data-tab="extractedTab">Extracted HR List (<span id="savedCountBadge">0</span> Remaining)</button>
-          <button class="tab-btn" data-tab="manualTab">Manual Raw Emails</button>
-          <button class="tab-btn" data-tab="importPdfTab">📂 Upload HR PDF / Docs</button>
+          <button class="tab-btn active" data-tab="extractedTab">📋 Active HR List (<span id="savedCountBadge">0</span> Remaining)</button>
           <button class="tab-btn" data-tab="vaultTab">📁 Document Vault (<span id="vaultTotalBadge">0</span> Delivered)</button>
+          <button class="tab-btn" data-tab="manualTab">✍️ Manual Raw Emails</button>
         </div>
 
         <!-- TAB 1: Extracted & Saved HR Database -->

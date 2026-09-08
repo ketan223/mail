@@ -124,6 +124,21 @@ document.addEventListener('DOMContentLoaded', () => {
   let cachedResumeDraft = null;
   let cachedVaultData = [];
 
+  // Resume Quick Controls
+  const uploadDifferentResumeBtn = document.getElementById('uploadDifferentResumeBtn');
+  const changeResumeBtn = document.getElementById('changeResumeBtn');
+
+  // Bracket Explainer Controls
+  const removeBracketsBtn = document.getElementById('removeBracketsBtn');
+  const restoreBracketsBtn = document.getElementById('restoreBracketsBtn');
+
+  // Step 2 Quick HR PDF Upload Banner
+  const hrPdfQuickBanner = document.getElementById('hrPdfQuickBanner');
+  const quickUploadHrPdfBtn = document.getElementById('quickUploadHrPdfBtn');
+  const quickHrPdfInput = document.getElementById('quickHrPdfInput');
+  const quickImportStatusArea = document.getElementById('quickImportStatusArea');
+  const quickImportStatusText = document.getElementById('quickImportStatusText');
+
   const EMAIL_REGEX = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
 
   // -------------------------------------------------------------
@@ -262,6 +277,36 @@ document.addEventListener('DOMContentLoaded', () => {
         emailMessageInput.value = cachedResumeDraft.message || emailMessageInput.value;
         showToast('Auto-generated pitch re-applied to form!', 'info');
       }
+    });
+  }
+
+  // Resume Quick Action Buttons
+  if (uploadDifferentResumeBtn) {
+    uploadDifferentResumeBtn.addEventListener('click', () => resumeFileInput.click());
+  }
+  if (changeResumeBtn) {
+    changeResumeBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      resumeFileInput.click();
+    });
+  }
+
+  // Bracket Explainer / Clean Text Toggles
+  if (removeBracketsBtn) {
+    removeBracketsBtn.addEventListener('click', () => {
+      const name = senderNameInput.value.trim() || 'Ketan Tiwari';
+      emailSubjectInput.value = `Application: Software Engineering & AI Intern - ${name}`;
+      emailMessageInput.value = `Dear Hiring Team,\n\nI hope you are doing well.\n\nI am writing to inquire about Software Engineering and AI Internship opportunities with your engineering team.\n\nI am a Full-Stack & Generative AI Engineer with hands-on experience building production-ready LLM/RAG pipelines, autonomous agentic workflows, scalable backend APIs, and modern web applications. I am keen to join your engineering team as an intern to contribute directly to impactful projects and learn from your talented engineers.\n\nPlease find my resume attached for your review. I would welcome the opportunity for a brief conversation to discuss how I can add value to your team.\n\nThank you for your time and consideration.\n\nBest regards,\n${name}\ntiwariketan045@gmail.com\n+91-9769997106`;
+      showToast('Brackets removed! Plain clean generic text applied.', 'info');
+    });
+  }
+
+  if (restoreBracketsBtn) {
+    restoreBracketsBtn.addEventListener('click', () => {
+      const name = senderNameInput.value.trim() || 'Ketan Tiwari';
+      emailSubjectInput.value = `Application: Software Engineering & AI Intern - ${name} - {{company}}`;
+      emailMessageInput.value = `Dear {{name}},\n\nI hope you are doing well.\n\nI am writing to inquire about Software Engineering and AI Internship opportunities at {{company}}.\n\nI am a Full-Stack & Generative AI Engineer with hands-on experience building production-ready LLM/RAG pipelines, autonomous agentic workflows, scalable backend APIs, and modern web applications. I am keen to join {{company}} as an engineering intern to contribute directly to impactful projects and learn from your talented engineering team.\n\nPlease find my resume attached for your review. I would welcome the opportunity for a brief conversation to discuss how I can add value to your team.\n\nThank you for your time and consideration.\n\nBest regards,\n${name}\ntiwariketan045@gmail.com\n+91-9769997106`;
+      showToast('Dynamic tags ({{name}}, {{company}}) restored!', 'info');
     });
   }
 
@@ -724,7 +769,48 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  async function handleHrPdfImport(file) {
+  // Prominent Step 2 HR PDF Quick Banner Listeners
+  if (quickUploadHrPdfBtn) {
+    quickUploadHrPdfBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      quickHrPdfInput.click();
+    });
+  }
+
+  if (hrPdfQuickBanner) {
+    hrPdfQuickBanner.addEventListener('click', (e) => {
+      if (e.target !== quickUploadHrPdfBtn) {
+        quickHrPdfInput.click();
+      }
+    });
+
+    hrPdfQuickBanner.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      hrPdfQuickBanner.classList.add('dragover');
+    });
+
+    hrPdfQuickBanner.addEventListener('dragleave', () => {
+      hrPdfQuickBanner.classList.remove('dragover');
+    });
+
+    hrPdfQuickBanner.addEventListener('drop', (e) => {
+      e.preventDefault();
+      hrPdfQuickBanner.classList.remove('dragover');
+      if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+        handleHrPdfImport(e.dataTransfer.files[0], quickImportStatusArea, quickImportStatusText);
+      }
+    });
+  }
+
+  if (quickHrPdfInput) {
+    quickHrPdfInput.addEventListener('change', (e) => {
+      if (e.target.files && e.target.files.length > 0) {
+        handleHrPdfImport(e.target.files[0], quickImportStatusArea, quickImportStatusText);
+      }
+    });
+  }
+
+  async function handleHrPdfImport(file, statusAreaEl = null, statusTextEl = null) {
     if (!file) return;
 
     const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
@@ -733,11 +819,14 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    hrPdfNameDisplay.textContent = file.name;
-    hrPdfDropEmpty.classList.add('hidden');
-    hrPdfDropFilled.classList.remove('hidden');
-    importStatusArea.classList.remove('hidden');
-    importStatusText.textContent = `Parsing ${file.name}... Extracting HR contacts...`;
+    const activeStatusArea = statusAreaEl || importStatusArea;
+    const activeStatusText = statusTextEl || importStatusText;
+
+    if (hrPdfNameDisplay) hrPdfNameDisplay.textContent = file.name;
+    if (hrPdfDropEmpty) hrPdfDropEmpty.classList.add('hidden');
+    if (hrPdfDropFilled) hrPdfDropFilled.classList.remove('hidden');
+    if (activeStatusArea) activeStatusArea.classList.remove('hidden');
+    if (activeStatusText) activeStatusText.textContent = `Parsing ${file.name}... Extracting HR contacts...`;
 
     const formData = new FormData();
     formData.append('pdf', file);
@@ -750,18 +839,18 @@ document.addEventListener('DOMContentLoaded', () => {
       const data = await res.json();
 
       if (data.success && data.contacts && data.contacts.length > 0) {
-        importStatusText.textContent = `Extracted ${data.count} contacts! Database updated...`;
+        if (activeStatusText) activeStatusText.textContent = `Extracted ${data.count} contacts! Database updated...`;
         showToast(`Extracted ${data.count} HR contacts! Assigned to ${data.docLabel}.`, 'success');
         await loadSavedContacts();
         await loadVaultData();
-        tabBtns[0].click();
+        if (tabBtns && tabBtns[0]) tabBtns[0].click();
       } else {
         showToast(data.error || 'No email contacts could be extracted from this PDF.', 'error');
       }
     } catch (err) {
       showToast('Failed to parse PDF: ' + err.message, 'error');
     } finally {
-      importStatusArea.classList.add('hidden');
+      if (activeStatusArea) activeStatusArea.classList.add('hidden');
     }
   }
 
