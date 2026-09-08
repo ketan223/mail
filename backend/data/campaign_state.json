@@ -1,16 +1,16 @@
 {
-  "status": "paused",
+  "status": "running_batch",
   "batchSize": 50,
   "pauseDurationMs": 1800000,
-  "currentBatchNumber": 15,
-  "sentInCurrentBatch": 50,
-  "totalBatches": 31,
+  "currentBatchNumber": 21,
+  "sentInCurrentBatch": 2,
+  "totalBatches": 22,
   "nextBatchRunTime": null,
   "stats": {
     "totalQueued": 1528,
-    "sent": 258,
+    "sent": 495,
     "failed": 1,
-    "skippedMx": 478
+    "skippedMx": 989
   },
   "senderName": "Ketan Tiwari",
   "subject": "Application: Software Engineering & AI Intern - Ketan Tiwari - {{company}}",

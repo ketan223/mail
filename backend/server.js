@@ -563,7 +563,7 @@ class CampaignEngine {
       if (fs.existsSync(CAMPAIGN_STATE_FILE)) {
         const raw = fs.readFileSync(CAMPAIGN_STATE_FILE, 'utf8').replace(/^\uFEFF/, '').trim();
         const saved = JSON.parse(raw || '{}');
-        if (saved.status === 'waiting_pause' || saved.status === 'running_batch') {
+        if (saved.status === 'waiting_pause' || saved.status === 'running_batch' || saved.status === 'paused') {
           const allContacts = JSON.parse(fs.readFileSync(CONTACTS_FILE, 'utf8') || '[]');
           const alreadySent = this.getSentEmailsSet();
           const unsent = allContacts.filter(c => c.email && EMAIL_REGEX.test(c.email) && !alreadySent.has(c.email.toLowerCase().trim()));
@@ -573,7 +573,7 @@ class CampaignEngine {
             this.activePayload = {
               resume: { filename: 'Ketan_Resume.pdf', buffer: fs.readFileSync(defaultResume) },
               senderName: saved.senderName || 'Ketan Tiwari',
-              subject: saved.subject || 'Application: Software & AI Engineer - Ketan Tiwari - {{company}}',
+              subject: saved.subject || 'Application: Software Engineering & AI Intern - Ketan Tiwari - {{company}}',
               message: saved.message || ''
             };
             this.queue = unsent;
@@ -585,7 +585,7 @@ class CampaignEngine {
             this.sentInCurrentBatch = saved.sentInCurrentBatch || 0;
 
             const remainingMs = (saved.nextBatchRunTime || 0) - Date.now();
-            if (remainingMs > 1000) {
+            if (saved.status === 'waiting_pause' && remainingMs > 1000) {
               this.status = 'waiting_pause';
               this.nextBatchRunTime = saved.nextBatchRunTime;
               console.log(`[STATE RESTORED] Resuming pause: ${Math.round(remainingMs / 1000)}s remaining before Batch ${this.currentBatchNumber + 1}`);
