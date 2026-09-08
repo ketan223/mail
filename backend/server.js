@@ -459,15 +459,26 @@ class CampaignEngine {
       }
 
       // 2. Personalize subject and message
-      const personalizedSubject = this.activePayload.subject
+      let personalizedSubject = this.activePayload.subject
         .replace(/{{\s*name\s*}}/gi, displayName)
         .replace(/{{\s*company\s*}}/gi, displayCompany)
         .replace(/{{\s*title\s*}}/gi, r.title || 'Role');
 
-      const personalizedMessage = this.activePayload.message
+      let personalizedMessage = this.activePayload.message
         .replace(/{{\s*name\s*}}/gi, displayName)
         .replace(/{{\s*company\s*}}/gi, displayCompany)
         .replace(/{{\s*title\s*}}/gi, r.title || 'the open role');
+
+      // Auto-personalize if clean natural template is used without brackets
+      if (displayName && displayName !== 'Hiring Manager') {
+        personalizedMessage = personalizedMessage.replace(/^Dear\s+Hiring\s+Manager,/i, `Dear ${displayName},`);
+      }
+      if (displayCompany && displayCompany !== 'your team' && displayCompany !== 'your company') {
+        personalizedMessage = personalizedMessage.replace(/at\s+your\s+company/gi, `at ${displayCompany}`);
+        if (!personalizedSubject.includes(displayCompany) && !personalizedSubject.includes('{{')) {
+          personalizedSubject = `${personalizedSubject} - ${displayCompany}`;
+        }
+      }
 
       const mailOptions = {
         from: this.activePayload.senderName 
@@ -1112,7 +1123,7 @@ I hope you are doing well.
 
 I am writing to inquire about Software Engineering and AI/ML Internship opportunities at {{company}}.
 
-I am a passionate developer with hands-on experience in ${skillsString}. I have built production-ready full-stack applications, autonomous agentic workflows, scalable backend services, and modern AI/LLM pipelines. I am keen to join {{company}} as an engineering intern to contribute directly to impactful projects and learn from your talented engineering team.
+I am a passionate developer with hands-on experience in ${skillsString}. I have built production-ready full-stack applications, autonomous agentic workflows, scalable backend APIs, and modern AI/LLM pipelines. I am keen to join {{company}} as an engineering intern to contribute directly to impactful projects and learn from your talented engineering team.
 
 Please find my resume attached for your review. I would welcome the opportunity for a brief conversation to discuss how I can add value to your team.
 

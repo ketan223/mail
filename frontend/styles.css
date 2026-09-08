@@ -1757,4 +1757,116 @@ textarea {
   font-size: 12.5px;
 }
 
+/* Live Personalization Preview */
+.live-preview-container {
+  margin-top: 14px;
+  background: #0f172a;
+  border: 1px solid rgba(59, 130, 246, 0.25);
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+}
+
+.live-preview-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 14px;
+  background: rgba(30, 41, 59, 0.9);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.preview-header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.preview-badge-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #10b981;
+  box-shadow: 0 0 8px #10b981;
+}
+
+.preview-header-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: #f8fafc;
+  letter-spacing: 0.02em;
+}
+
+.preview-sample-tag {
+  font-size: 11px;
+  color: #93c5fd;
+  background: rgba(59, 130, 246, 0.15);
+  padding: 2px 8px;
+  border-radius: 4px;
+  border: 1px solid rgba(59, 130, 246, 0.3);
+}
+
+.live-preview-card {
+  padding: 14px;
+  font-size: 12.5px;
+}
+
+.preview-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 6px;
+  align-items: baseline;
+}
+
+.preview-key {
+  color: #94a3b8;
+  font-weight: 600;
+  font-size: 11px;
+  min-width: 55px;
+  text-transform: uppercase;
+}
+
+.preview-val {
+  color: #e2e8f0;
+  font-size: 12.5px;
+}
+
+.preview-sub-val {
+  color: #60a5fa;
+  font-weight: 500;
+}
+
+.preview-divider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.08);
+  margin: 10px 0;
+}
+
+.preview-body {
+  white-space: pre-wrap;
+  font-family: inherit;
+  color: #cbd5e1;
+  font-size: 12px;
+  line-height: 1.55;
+  background: rgba(15, 23, 42, 0.6);
+  padding: 10px 12px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  max-height: 180px;
+  overflow-y: auto;
+}
+
+.preview-security-badge {
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  color: #34d399;
+  background: rgba(16, 185, 129, 0.08);
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
 

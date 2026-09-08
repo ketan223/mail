@@ -128,9 +128,11 @@ document.addEventListener('DOMContentLoaded', () => {
   const uploadDifferentResumeBtn = document.getElementById('uploadDifferentResumeBtn');
   const changeResumeBtn = document.getElementById('changeResumeBtn');
 
-  // Bracket Explainer Controls
-  const removeBracketsBtn = document.getElementById('removeBracketsBtn');
-  const restoreBracketsBtn = document.getElementById('restoreBracketsBtn');
+  // Live Email Personalization Preview Elements
+  const previewRecipient = document.getElementById('previewRecipient');
+  const previewSubject = document.getElementById('previewSubject');
+  const previewBody = document.getElementById('previewBody');
+  const previewSampleTag = document.getElementById('previewSampleTag');
 
   // Step 2 Quick HR PDF Upload Banner
   const hrPdfQuickBanner = document.getElementById('hrPdfQuickBanner');
@@ -241,6 +243,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (data.suggested.message) {
           emailMessageInput.value = data.suggested.message;
         }
+        updateLivePreview();
 
         // Show parsed badge card
         if (resumeParsedBadge) {
@@ -291,24 +294,46 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Bracket Explainer / Clean Text Toggles
-  if (removeBracketsBtn) {
-    removeBracketsBtn.addEventListener('click', () => {
-      const name = senderNameInput.value.trim() || 'Ketan Tiwari';
-      emailSubjectInput.value = `Application: Software Engineering & AI Intern - ${name}`;
-      emailMessageInput.value = `Dear Hiring Team,\n\nI hope you are doing well.\n\nI am writing to inquire about Software Engineering and AI Internship opportunities with your engineering team.\n\nI am a Full-Stack & Generative AI Engineer with hands-on experience building production-ready LLM/RAG pipelines, autonomous agentic workflows, scalable backend APIs, and modern web applications. I am keen to join your engineering team as an intern to contribute directly to impactful projects and learn from your talented engineers.\n\nPlease find my resume attached for your review. I would welcome the opportunity for a brief conversation to discuss how I can add value to your team.\n\nThank you for your time and consideration.\n\nBest regards,\n${name}\ntiwariketan045@gmail.com\n+91-9769997106`;
-      showToast('Brackets removed! Plain clean generic text applied.', 'info');
-    });
+  // Live Email Personalization Preview Controller
+  function updateLivePreview() {
+    let sampleName = 'Akanksha Puri';
+    let sampleCompany = 'Sourcefuse';
+    let sampleEmail = 'akanksha.puri@sourcefuse.com';
+
+    if (Array.isArray(allContacts) && allContacts.length > 0) {
+      const firstValid = allContacts.find(c => c && c.email && c.name && c.company && c.name.toLowerCase() !== 'hiring manager') || allContacts[0];
+      if (firstValid) {
+        sampleName = firstValid.name || sampleName;
+        sampleCompany = firstValid.company || sampleCompany;
+        sampleEmail = firstValid.email || sampleEmail;
+      }
+    }
+
+    if (previewSampleTag) {
+      previewSampleTag.textContent = `Sample: ${sampleName} (${sampleCompany})`;
+    }
+    if (previewRecipient) {
+      previewRecipient.textContent = `${sampleName} <${sampleEmail}>`;
+    }
+    if (previewSubject && emailSubjectInput) {
+      let sub = emailSubjectInput.value
+        .replace(/{{\s*name\s*}}/gi, sampleName)
+        .replace(/{{\s*company\s*}}/gi, sampleCompany);
+      previewSubject.textContent = sub;
+    }
+    if (previewBody && emailMessageInput) {
+      let msg = emailMessageInput.value
+        .replace(/{{\s*name\s*}}/gi, sampleName)
+        .replace(/{{\s*company\s*}}/gi, sampleCompany)
+        .replace(/^Dear\s+Hiring\s+Manager,/i, `Dear ${sampleName},`)
+        .replace(/at\s+your\s+company/gi, `at ${sampleCompany}`);
+      previewBody.textContent = msg;
+    }
   }
 
-  if (restoreBracketsBtn) {
-    restoreBracketsBtn.addEventListener('click', () => {
-      const name = senderNameInput.value.trim() || 'Ketan Tiwari';
-      emailSubjectInput.value = `Application: Software Engineering & AI Intern - ${name} - {{company}}`;
-      emailMessageInput.value = `Dear {{name}},\n\nI hope you are doing well.\n\nI am writing to inquire about Software Engineering and AI Internship opportunities at {{company}}.\n\nI am a Full-Stack & Generative AI Engineer with hands-on experience building production-ready LLM/RAG pipelines, autonomous agentic workflows, scalable backend APIs, and modern web applications. I am keen to join {{company}} as an engineering intern to contribute directly to impactful projects and learn from your talented engineering team.\n\nPlease find my resume attached for your review. I would welcome the opportunity for a brief conversation to discuss how I can add value to your team.\n\nThank you for your time and consideration.\n\nBest regards,\n${name}\ntiwariketan045@gmail.com\n+91-9769997106`;
-      showToast('Dynamic tags ({{name}}, {{company}}) restored!', 'info');
-    });
-  }
+  if (emailSubjectInput) emailSubjectInput.addEventListener('input', updateLivePreview);
+  if (emailMessageInput) emailMessageInput.addEventListener('input', updateLivePreview);
+  if (senderNameInput) senderNameInput.addEventListener('input', updateLivePreview);
 
   function handleResumeSelection(file) {
     if (!file) return;
@@ -469,6 +494,7 @@ document.addEventListener('DOMContentLoaded', () => {
       allContacts = data.contacts || [];
       updateFilterCounts();
       applyFilter();
+      updateLivePreview();
     } catch (err) {
       contactsTableBody.innerHTML = `<tr><td colspan="6" class="empty-state">Error loading contacts: ${err.message}</td></tr>`;
     }
@@ -1415,5 +1441,6 @@ document.addEventListener('DOMContentLoaded', () => {
   loadSavedContacts();
   loadVaultData();
   updateManualDetectedCount();
+  updateLivePreview();
   startCampaignPolling(); // Immediately syncs if campaign already running on backend!
 });
