@@ -1936,17 +1936,22 @@ document.addEventListener('DOMContentLoaded', () => {
   const statBouncesFiltered = document.getElementById('statBouncesFiltered');
   const cardFilterGenuine = document.getElementById('cardFilterGenuine');
   const cardFilterAutomated = document.getElementById('cardFilterAutomated');
+  const tabNavAll = document.getElementById('tabNavAll');
   const tabNavGenuine = document.getElementById('tabNavGenuine');
   const tabNavAutomated = document.getElementById('tabNavAutomated');
+  const countBadgeAll = document.getElementById('countBadgeAll');
   const countBadgeGenuine = document.getElementById('countBadgeGenuine');
   const countBadgeAutomated = document.getElementById('countBadgeAutomated');
   const inboxSearchInput = document.getElementById('inboxSearchInput');
-  const genuineResponsesList = document.getElementById('genuineResponsesList');
-  const automatedResponsesList = document.getElementById('automatedResponsesList');
   const autoAlertTitle = document.getElementById('autoAlertTitle');
   const autoAlertSub = document.getElementById('autoAlertSub');
 
-  // Detail Modal Elements
+  // Unified Full-Width Email List Elements
+  const singleListViewContainer = document.getElementById('singleListViewContainer');
+  const responsesList = document.getElementById('responsesList');
+  const inboxListSummary = document.getElementById('inboxListSummary');
+
+  // Detail Modal Elements (Fallback)
   const inboxDetailModal = document.getElementById('inboxDetailModal');
   const closeInboxModalBtn = document.getElementById('closeInboxModalBtn');
   const modalTagPill = document.getElementById('modalTagPill');
@@ -1960,43 +1965,13 @@ document.addEventListener('DOMContentLoaded', () => {
   const modalOpenGmailBtn = document.getElementById('modalOpenGmailBtn');
 
   let currentInboxResponses = { genuine: [], automated: [] };
-  let currentActiveInboxTab = 'genuine';
+  let currentActiveInboxTab = 'all'; // Default to 'all' so all emails appear right away
   let currentActiveAccountFilter = 'all';
   let activeModalEmail = '';
   let activeExpandedCardId = null;
-
-  // Side-by-Side 3-Column Elements
-  const tabModeSideBySide = document.getElementById('tabModeSideBySide');
-  const sideBySideColumnsContainer = document.getElementById('sideBySideColumnsContainer');
-  const singleListViewContainer = document.getElementById('singleListViewContainer');
-
-  const colAccount1 = document.getElementById('colAccount1');
-  const colAccount2 = document.getElementById('colAccount2');
-  const colAccount3 = document.getElementById('colAccount3');
-  const colAccount4 = document.getElementById('colAccount4');
-
-  const colCards1 = document.getElementById('colCards1');
-  const colCards2 = document.getElementById('colCards2');
-  const colCards3 = document.getElementById('colCards3');
-  const colCards4 = document.getElementById('colCards4');
-
-  const colGenCount1 = document.getElementById('colGenCount1');
-  const colAutoCount1 = document.getElementById('colAutoCount1');
-  const colGenCount2 = document.getElementById('colGenCount2');
-  const colAutoCount2 = document.getElementById('colAutoCount2');
-  const colGenCount3 = document.getElementById('colGenCount3');
-  const colAutoCount3 = document.getElementById('colAutoCount3');
-  const colGenCount4 = document.getElementById('colGenCount4');
-  const colAutoCount4 = document.getElementById('colAutoCount4');
-
-  // Response Pagination & Column Stepper State
-  let colPages = [1, 1, 1, 1];
-  const COL_PAGE_SIZE = 5;
   let currentOpenItem = null;
-  let currentInboxPage = 1;
-  let inboxPageSize = 10;
 
-  // DOM Elements for Live Reader Pane
+  // DOM Elements for Live Large Scrollable Reader Pane
   const inboxActiveReaderPane = document.getElementById('inboxActiveReaderPane');
   const readerAccountBadge = document.getElementById('readerAccountBadge');
   const readerCategoryPill = document.getElementById('readerCategoryPill');
@@ -2005,11 +1980,13 @@ document.addEventListener('DOMContentLoaded', () => {
   const readerCompany = document.getElementById('readerCompany');
   const readerSender = document.getElementById('readerSender');
   const readerSubject = document.getElementById('readerSubject');
+  const readerBodyContainer = document.getElementById('readerBodyContainer');
   const readerBodyText = document.getElementById('readerBodyText');
   const readerReplyGmailBtn = document.getElementById('readerReplyGmailBtn');
   const readerCopyEmailBtn = document.getElementById('readerCopyEmailBtn');
   const readerCopySubjectBtn = document.getElementById('readerCopySubjectBtn');
   const closeReaderPaneBtn = document.getElementById('closeReaderPaneBtn');
+  const readerCloseBottomBtn = document.getElementById('readerCloseBottomBtn');
 
   // 5-Minute Auto-Sync State
   let isAutoSyncActive = true;
@@ -2169,43 +2146,56 @@ document.addEventListener('DOMContentLoaded', () => {
   function renderInboxView(data) {
     if (!data || !data.stats) return;
 
-    // Update Counter Badges on Account Switcher Pills
-    const pillCountAll = document.getElementById('pillCountAll');
-    const pillCountAcc1 = document.getElementById('pillCountAcc1');
-    const pillCountAcc2 = document.getElementById('pillCountAcc2');
-    const pillCountAcc3 = document.getElementById('pillCountAcc3');
-    const pillCountAcc4 = document.getElementById('pillCountAcc4');
-
+    // 1. Update Counter Badges on Account Switcher Pills
     const accStats = (data.stats && data.stats.accounts) ? data.stats.accounts : {};
     const accKeys = Object.keys(accStats);
-    const count1 = accKeys[0] && accStats[accKeys[0]] ? accStats[accKeys[0]].totalCount : 0;
-    const count2 = accKeys[1] && accStats[accKeys[1]] ? accStats[accKeys[1]].totalCount : 0;
-    const count3 = accKeys[2] && accStats[accKeys[2]] ? accStats[accKeys[2]].totalCount : 0;
-    const count4 = accKeys[3] && accStats[accKeys[3]] ? accStats[accKeys[3]].totalCount : 0;
+
+    const pillCountAll = document.getElementById('pillCountAll');
     const totalAll = (data.genuine ? data.genuine.length : 0) + (data.automated ? data.automated.length : 0);
-
     if (pillCountAll) pillCountAll.textContent = totalAll;
-    if (pillCountAcc1) pillCountAcc1.textContent = count1;
-    if (pillCountAcc2) pillCountAcc2.textContent = count2;
-    if (pillCountAcc3) pillCountAcc3.textContent = count3;
-    if (pillCountAcc4) pillCountAcc4.textContent = count4;
 
-    // Filter displayed lists based on selected sender account
+    // Dynamically update the 4 account pill buttons with accurate data-account, label, and total counts
+    const pillIds = ['pillCountAcc1', 'pillCountAcc2', 'pillCountAcc3', 'pillCountAcc4'];
+    const pillBtns = document.querySelectorAll('#inboxAccountPills .account-pill-btn:not([data-account="all"])');
+    pillBtns.forEach((btn, idx) => {
+      const email = accKeys[idx];
+      if (email && accStats[email]) {
+        btn.setAttribute('data-account', email);
+        const labelEl = btn.querySelector('.pill-text');
+        if (labelEl) {
+          labelEl.textContent = accStats[email].label || email.split('@')[0];
+        }
+        btn.title = email;
+        const cntEl = document.getElementById(pillIds[idx]) || btn.querySelector('.pill-counter');
+        if (cntEl) cntEl.textContent = accStats[email].totalCount || 0;
+      }
+    });
+
+    // 2. Filter displayed lists based on selected sender account
     let dispGenuine = data.genuine || [];
     let dispAutomated = data.automated || [];
     if (currentActiveAccountFilter !== 'all') {
-      dispGenuine = dispGenuine.filter(x => (x.recipientAccount || '').toLowerCase() === currentActiveAccountFilter.toLowerCase());
-      dispAutomated = dispAutomated.filter(x => (x.recipientAccount || '').toLowerCase() === currentActiveAccountFilter.toLowerCase());
+      const filterLower = currentActiveAccountFilter.toLowerCase();
+      dispGenuine = dispGenuine.filter(x => {
+        const acc = (x.recipientAccount || '').toLowerCase();
+        return acc === filterLower || acc.includes(filterLower);
+      });
+      dispAutomated = dispAutomated.filter(x => {
+        const acc = (x.recipientAccount || '').toLowerCase();
+        return acc === filterLower || acc.includes(filterLower);
+      });
     }
 
     const gCount = dispGenuine.length;
     const aCount = dispAutomated.length;
+    const allCount = gCount + aCount;
     const bCount = data.stats.bouncesCount || 0;
 
     // Update Counts & Badges
     if (statGenuineCount) statGenuineCount.textContent = gCount;
     if (statAutomatedCount) statAutomatedCount.textContent = aCount;
     if (statBouncesFiltered) statBouncesFiltered.textContent = bCount;
+    if (countBadgeAll) countBadgeAll.textContent = allCount;
     if (countBadgeGenuine) countBadgeGenuine.textContent = gCount;
     if (countBadgeAutomated) countBadgeAutomated.textContent = aCount;
 
@@ -2242,535 +2232,116 @@ document.addEventListener('DOMContentLoaded', () => {
   function renderResponseCards() {
     const query = (inboxSearchInput ? inboxSearchInput.value : '').toLowerCase().trim();
 
-    // SIDE-BY-SIDE 4-COLUMN MODE (ACTIVE IN ALL MODES: ALL, GENUINE ONLY, AUTO-REPLIES ONLY)
-    if (sideBySideColumnsContainer) sideBySideColumnsContainer.classList.remove('hidden');
-    if (singleListViewContainer) singleListViewContainer.classList.add('hidden');
-
-    if (currentActiveInboxTab === 'side_by_side') {
-      if (tabModeSideBySide) tabModeSideBySide.classList.add('active');
-      if (tabNavGenuine) tabNavGenuine.classList.remove('active');
-      if (tabNavAutomated) tabNavAutomated.classList.remove('active');
-      if (cardFilterGenuine) cardFilterGenuine.classList.remove('active-metric');
-      if (cardFilterAutomated) cardFilterAutomated.classList.remove('active-metric');
-    } else if (currentActiveInboxTab === 'genuine') {
-      if (tabModeSideBySide) tabModeSideBySide.classList.remove('active');
-      if (tabNavGenuine) tabNavGenuine.classList.add('active');
-      if (tabNavAutomated) tabNavAutomated.classList.remove('active');
-      if (cardFilterGenuine) cardFilterGenuine.classList.add('active-metric');
-      if (cardFilterAutomated) cardFilterAutomated.classList.remove('active-metric');
-    } else if (currentActiveInboxTab === 'automated') {
-      if (tabModeSideBySide) tabModeSideBySide.classList.remove('active');
-      if (tabNavAutomated) tabNavAutomated.classList.add('active');
-      if (tabNavGenuine) tabNavGenuine.classList.remove('active');
-      if (cardFilterAutomated) cardFilterAutomated.classList.add('active-metric');
-      if (cardFilterGenuine) cardFilterGenuine.classList.remove('active-metric');
-    }
-
-    const activeAccountsList = (window.__activeSenderAccounts && window.__activeSenderAccounts.length > 0)
-      ? window.__activeSenderAccounts
-      : Object.keys((data.stats && data.stats.accounts) || {});
-
-    const accounts = [
-      {
-        email: activeAccountsList[0] || 'account1',
-        name: (activeAccountsList[0] || 'Sender 1').split('@')[0],
-        colEl: colAccount1,
-        cardsEl: colCards1,
-        genCountEl: colGenCount1,
-        autoCountEl: colAutoCount1,
-        stepperInfoEl: document.getElementById('colStepperInfo1'),
-        prevBtnEl: document.getElementById('colPrevBtn1'),
-        nextBtnEl: document.getElementById('colNextBtn1')
-      },
-      {
-        email: activeAccountsList[1] || 'account2',
-        name: (activeAccountsList[1] || 'Sender 2').split('@')[0],
-        colEl: colAccount2,
-        cardsEl: colCards2,
-        genCountEl: colGenCount2,
-        autoCountEl: colAutoCount2,
-        stepperInfoEl: document.getElementById('colStepperInfo2'),
-        prevBtnEl: document.getElementById('colPrevBtn2'),
-        nextBtnEl: document.getElementById('colNextBtn2')
-      },
-      {
-        email: activeAccountsList[2] || 'account3',
-        name: (activeAccountsList[2] || 'Sender 3').split('@')[0],
-        colEl: colAccount3,
-        cardsEl: colCards3,
-        genCountEl: colGenCount3,
-        autoCountEl: colAutoCount3,
-        stepperInfoEl: document.getElementById('colStepperInfo3'),
-        prevBtnEl: document.getElementById('colPrevBtn3'),
-        nextBtnEl: document.getElementById('colNextBtn3')
-      },
-      {
-        email: activeAccountsList[3] || 'account4',
-        name: (activeAccountsList[3] || 'Sender 4').split('@')[0],
-        colEl: colAccount4,
-        cardsEl: colCards4,
-        genCountEl: colGenCount4,
-        autoCountEl: colAutoCount4,
-        stepperInfoEl: document.getElementById('colStepperInfo4'),
-        prevBtnEl: document.getElementById('colPrevBtn4'),
-        nextBtnEl: document.getElementById('colNextBtn4')
-      }
-    ];
-
-    accounts.forEach((acc, accIdx) => {
-      // Raw items for this specific account
-      const accGen = (currentInboxResponses.genuine || []).filter(item => 
-        (item.recipientAccount || '').toLowerCase().includes(acc.name.toLowerCase()) ||
-        (item.recipientAccount || '').toLowerCase() === (acc.email || '').toLowerCase()
-      );
-      const accAuto = (currentInboxResponses.automated || []).filter(item => 
-        (item.recipientAccount || '').toLowerCase().includes(acc.name.toLowerCase()) ||
-        (item.recipientAccount || '').toLowerCase() === (acc.email || '').toLowerCase()
-      );
-
-      // Update column header count badges
-      if (acc.genCountEl) acc.genCountEl.textContent = accGen.length;
-      if (acc.autoCountEl) acc.autoCountEl.textContent = accAuto.length;
-
-      // Visibility according to account pill filter
-      const isSelected = (currentActiveAccountFilter === 'all') || 
-        acc.email.toLowerCase() === currentActiveAccountFilter.toLowerCase();
-      if (acc.colEl) {
-        acc.colEl.style.display = isSelected ? '' : 'none';
-      }
-
-      // Filter items by search query if any
-      const filteredAccGen = accGen.filter(item => {
-        if (!query) return true;
-        const text = `${item.company} ${item.senderName} ${item.senderEmail} ${item.subject} ${item.bodySnippet}`.toLowerCase();
-        return text.includes(query);
-      });
-
-      const filteredAccAuto = accAuto.filter(item => {
-        if (!query) return true;
-        const text = `${item.company} ${item.senderName} ${item.senderEmail} ${item.subject} ${item.bodySnippet}`.toLowerCase();
-        return text.includes(query);
-      });
-
-      // Filter by category: genuine, automated, or both
-      let allAccItems = [];
-      if (currentActiveInboxTab === 'genuine') {
-        allAccItems = filteredAccGen.map(x => ({ ...x, isGenuine: true }));
-      } else if (currentActiveInboxTab === 'automated') {
-        allAccItems = filteredAccAuto.map(x => ({ ...x, isGenuine: false }));
-      } else {
-        allAccItems = [
-          ...filteredAccGen.map(x => ({ ...x, isGenuine: true })),
-          ...filteredAccAuto.map(x => ({ ...x, isGenuine: false }))
-        ];
-      }
-
-      const totalItems = allAccItems.length;
-      const totalPages = Math.max(1, Math.ceil(totalItems / COL_PAGE_SIZE));
-      if (colPages[accIdx] > totalPages) colPages[accIdx] = totalPages;
-      if (colPages[accIdx] < 1) colPages[accIdx] = 1;
-
-      const startIdx = totalItems === 0 ? 0 : (colPages[accIdx] - 1) * COL_PAGE_SIZE;
-      const endIdx = Math.min(startIdx + COL_PAGE_SIZE, totalItems);
-
-      if (acc.stepperInfoEl) {
-        acc.stepperInfoEl.textContent = totalItems === 0 ? '0 of 0' : `${startIdx + 1}–${endIdx} of ${totalItems}`;
-      }
-      if (acc.prevBtnEl) acc.prevBtnEl.disabled = colPages[accIdx] <= 1;
-      if (acc.nextBtnEl) acc.nextBtnEl.disabled = colPages[accIdx] >= totalPages;
-
-      const pageSlice = allAccItems.slice(startIdx, endIdx);
-
-      if (acc.cardsEl) {
-        if (allAccItems.length === 0) {
-          const isGenTab = currentActiveInboxTab === 'genuine';
-          const autoCountForAcc = accAuto.length;
-          let emptyHelpText = '';
-          if (isGenTab && autoCountForAcc > 0) {
-            emptyHelpText = `0 direct interview inquiries yet, but <strong>${autoCountForAcc} Automated Auto-Replies</strong> received.<br><button type="button" class="btn-micro btn-subtle btn-switch-to-auto" style="margin-top: 8px; cursor: pointer;">🤖 View ${autoCountForAcc} Auto-Replies</button>`;
-          } else {
-            emptyHelpText = query ? 'No replies match your search filter.' : 'When emails arrive for ' + escapeHtml(acc.email) + ', they appear here.';
-          }
-          acc.cardsEl.innerHTML = `
-            <div class="inbox-column-empty">
-              <div style="font-size: 26px; margin-bottom: 6px;">📬</div>
-              <strong style="color: #cbd5e1; font-size: 13px;">${emptyLabel}</strong>
-              <div style="margin-top: 6px; color: #64748b; font-size: 11.5px; line-height: 1.4;">
-                ${emptyHelpText}
-              </div>
-            </div>
-          `;
-          const btnSwitch = acc.cardsEl.querySelector('.btn-switch-to-auto');
-          if (btnSwitch) {
-            btnSwitch.addEventListener('click', () => switchInboxTab('automated'));
-          }
-        } else {
-          acc.cardsEl.innerHTML = pageSlice.map(item => {
-            const isGen = item.isGenuine;
-            const isExpanded = activeExpandedCardId && activeExpandedCardId === item.id;
-            let tagClass = isGen ? (item.tagType === 'warning' ? 'warning' : 'success') : 'info';
-            let cardCls = isGen ? 'genuine-card' : 'automated-card';
-            let badgeHtml = isGen 
-              ? `<span class="badge-tag-pill success">🎯 Genuine HR</span>`
-              : `<span class="badge-tag-pill info">🤖 Auto-Reply</span>`;
-
-            if (isExpanded) {
-              return `
-                <div class="response-card ${cardCls} expanded-response-card selected-active-card" data-id="${escapeHtml(item.id)}" title="Click to collapse">
-                  <div class="response-card-top">
-                    <div class="response-card-badges">
-                      ${badgeHtml}
-                      <span class="badge-tag-pill ${tagClass}">${escapeHtml(item.tag || 'Reply')}</span>
-                      ${(item.actionPriority && item.actionPriority.includes('HIGH')) ? '<span class="badge-priority-pill">HIGH</span>' : ''}
-                      <span class="badge-expanded-reading">📖 READING NOW</span>
-                    </div>
-                    <div class="response-card-date">${escapeHtml(item.dateFormatted || item.date)}</div>
-                  </div>
-                  <div class="response-card-company-row" style="margin-top: 6px;">
-                    <span class="response-card-company" style="font-size: 14px;">${escapeHtml(item.company || 'Company')}</span>
-                    <span class="response-card-sender">• ${escapeHtml(item.senderName)} &lt;${escapeHtml(item.senderEmail)}&gt;</span>
-                  </div>
-                  <div class="response-card-subject expanded-subject">
-                    <strong>Subject:</strong> ${escapeHtml(item.subject)}
-                  </div>
-                  <div class="response-card-full-body">
-                    ${escapeHtml(item.bodySnippet || 'No email content available.')}
-                  </div>
-                  <div class="response-card-expanded-actions">
-                    <a href="${escapeHtml(item.gmailSearchUrl)}" target="_blank" class="btn-tiny btn-accent btn-open-gmail" onclick="event.stopPropagation()">📨 Reply in Gmail ↗</a>
-                    <button type="button" class="btn-tiny btn-subtle btn-copy-recruiter" data-email="${escapeHtml(item.senderEmail)}" onclick="event.stopPropagation()">📋 Copy Email</button>
-                    <button type="button" class="btn-tiny btn-subtle btn-copy-subj" data-subj="${escapeHtml(item.subject)}" onclick="event.stopPropagation()">📋 Copy Subject</button>
-                    <button type="button" class="btn-tiny btn-secondary btn-collapse-card" onclick="event.stopPropagation()">▲ Collapse</button>
-                  </div>
-                </div>
-              `;
-            }
-
-            return `
-              <div class="response-card ${cardCls}" data-id="${escapeHtml(item.id)}" title="Click to open & read email right here">
-                <div class="response-card-top">
-                  <div class="response-card-badges">
-                    ${badgeHtml}
-                    <span class="badge-tag-pill ${tagClass}">${escapeHtml(item.tag || 'Reply')}</span>
-                    ${(item.actionPriority && item.actionPriority.includes('HIGH')) ? '<span class="badge-priority-pill">HIGH</span>' : ''}
-                  </div>
-                  <div class="response-card-date">${escapeHtml(item.dateFormatted || item.date)}</div>
-                </div>
-                <div class="response-card-company-row">
-                  <span class="response-card-company">${escapeHtml(item.company || 'Company')}</span>
-                  <span class="response-card-sender">• ${escapeHtml(item.senderName)}</span>
-                </div>
-                <div class="response-card-subject">${escapeHtml(item.subject)}</div>
-                <div class="response-card-snippet">${escapeHtml(item.bodySnippet)}</div>
-                <div class="response-card-actions">
-                  <button type="button" class="btn-tiny btn-subtle btn-view-full" data-id="${escapeHtml(item.id)}" data-cat="${isGen ? 'genuine' : 'automated'}">👀 Read Email ▾</button>
-                  <a href="${escapeHtml(item.gmailSearchUrl)}" target="_blank" class="btn-open-gmail" onclick="event.stopPropagation()">📨 Reply in Gmail ↗</a>
-                </div>
-              </div>
-            `;
-          }).join('');
-        }
-      }
-    });
-
-    if (sideBySideColumnsContainer) {
-      if (currentActiveAccountFilter === 'all') {
-        sideBySideColumnsContainer.style.gridTemplateColumns = 'repeat(3, minmax(0, 1fr))';
-      } else {
-        sideBySideColumnsContainer.style.gridTemplateColumns = '1fr';
-      }
-    }
-
-    return; // Completed side-by-side render
-
-    // 2. SINGLE LIST VIEW (PAGINATED - FOR GENUINE ONLY / AUTOMATED ONLY)
-    if (sideBySideColumnsContainer) sideBySideColumnsContainer.classList.add('hidden');
+    // Ensure single full-width list is visible
     if (singleListViewContainer) singleListViewContainer.classList.remove('hidden');
 
-    // 1. Filter genuine items
-    const filteredGenuine = (currentInboxResponses.genuine || []).filter(item => {
-      const matchesAccount = currentActiveAccountFilter === 'all' || 
-        (item.recipientAccount || '').toLowerCase() === currentActiveAccountFilter.toLowerCase();
-      if (!matchesAccount) return false;
+    // Update tab navigation active classes
+    if (tabNavAll) tabNavAll.classList.toggle('active', currentActiveInboxTab === 'all');
+    if (tabNavGenuine) tabNavGenuine.classList.toggle('active', currentActiveInboxTab === 'genuine');
+    if (tabNavAutomated) tabNavAutomated.classList.toggle('active', currentActiveInboxTab === 'automated');
+    if (cardFilterGenuine) cardFilterGenuine.classList.toggle('active-metric', currentActiveInboxTab === 'genuine');
+    if (cardFilterAutomated) cardFilterAutomated.classList.toggle('active-metric', currentActiveInboxTab === 'automated');
+
+    // 1. Prepare items
+    const rawGenuine = (currentInboxResponses.genuine || []).map(x => ({ ...x, isGenuine: true }));
+    const rawAutomated = (currentInboxResponses.automated || []).map(x => ({ ...x, isGenuine: false }));
+
+    const filterAccount = (item) => {
+      if (currentActiveAccountFilter === 'all') return true;
+      const acc = (item.recipientAccount || '').toLowerCase();
+      const target = currentActiveAccountFilter.toLowerCase();
+      return acc === target || acc.includes(target);
+    };
+
+    const filterSearch = (item) => {
       if (!query) return true;
-      const text = `${item.company} ${item.senderName} ${item.senderEmail} ${item.subject} ${item.bodySnippet}`.toLowerCase();
+      const text = `${item.company || ''} ${item.senderName || ''} ${item.senderEmail || ''} ${item.subject || ''} ${item.bodySnippet || ''} ${item.recipientAccount || ''}`.toLowerCase();
       return text.includes(query);
-    });
+    };
 
-    // 2. Filter automated items
-    const filteredAutomated = (currentInboxResponses.automated || []).filter(item => {
-      const matchesAccount = currentActiveAccountFilter === 'all' || 
-        (item.recipientAccount || '').toLowerCase() === currentActiveAccountFilter.toLowerCase();
-      if (!matchesAccount) return false;
-      if (!query) return true;
-      const text = `${item.company} ${item.senderName} ${item.senderEmail} ${item.subject} ${item.bodySnippet}`.toLowerCase();
-      return text.includes(query);
-    });
-
-    // Determine active list for pagination
-    const activeList = (currentActiveInboxTab === 'genuine') ? filteredGenuine : filteredAutomated;
-    const totalItems = activeList.length;
-    const pSize = (inboxPageSize === 'all') ? totalItems : (parseInt(inboxPageSize, 10) || 10);
-    const totalPages = (inboxPageSize === 'all' || totalItems === 0) ? 1 : Math.max(1, Math.ceil(totalItems / pSize));
-
-    // Clamp current page
-    if (currentInboxPage > totalPages) currentInboxPage = totalPages;
-    if (currentInboxPage < 1) currentInboxPage = 1;
-
-    const startIndex = (inboxPageSize === 'all') ? 0 : (currentInboxPage - 1) * pSize;
-    const endIndex = (inboxPageSize === 'all') ? totalItems : Math.min(startIndex + pSize, totalItems);
-
-    // Update Pagination Header & Footer Labels
-    if (pageRangeStart) pageRangeStart.textContent = totalItems === 0 ? '0' : (startIndex + 1);
-    if (pageRangeEnd) pageRangeEnd.textContent = endIndex;
-    if (pageTotalCount) pageTotalCount.textContent = totalItems;
-    if (prevPageBtn) prevPageBtn.disabled = currentInboxPage <= 1;
-    if (nextPageBtn) nextPageBtn.disabled = currentInboxPage >= totalPages;
-
-    if (footerCurrentPage) footerCurrentPage.textContent = currentInboxPage;
-    if (footerTotalPages) footerTotalPages.textContent = totalPages;
-    if (footerPrevPageBtn) footerPrevPageBtn.disabled = currentInboxPage <= 1;
-    if (footerNextPageBtn) footerNextPageBtn.disabled = currentInboxPage >= totalPages;
-
-    // Render Page Pill Buttons (e.g. 1, 2, 3...)
-    function renderPills(container) {
-      if (!container) return;
-      container.innerHTML = '';
-      if (totalPages <= 1) return;
-
-      let startP = Math.max(1, currentInboxPage - 2);
-      let endP = Math.min(totalPages, startP + 4);
-      if (endP - startP < 4) startP = Math.max(1, endP - 4);
-
-      for (let p = startP; p <= endP; p++) {
-        const btn = document.createElement('button');
-        btn.type = 'button';
-        btn.className = `page-pill ${p === currentInboxPage ? 'active' : ''}`;
-        btn.textContent = p;
-        btn.addEventListener('click', () => {
-          currentInboxPage = p;
-          renderResponseCards();
-        });
-        container.appendChild(btn);
-      }
-    }
-    renderPills(pagePillsTop);
-    renderPills(pagePillsBottom);
-
-    // Slice items for active page
-    const pagedGenuine = (inboxPageSize === 'all') ? filteredGenuine : 
-      (currentActiveInboxTab === 'genuine' ? filteredGenuine.slice(startIndex, endIndex) : filteredGenuine.slice(0, pSize));
-    const pagedAutomated = (inboxPageSize === 'all') ? filteredAutomated : 
-      (currentActiveInboxTab === 'automated' ? filteredAutomated.slice(startIndex, endIndex) : filteredAutomated.slice(0, pSize));
-
-    // Render Genuine List
-    if (genuineResponsesList) {
-      if (filteredGenuine.length === 0) {
-        if (filteredAutomated.length > 0) {
-          genuineResponsesList.innerHTML = `
-            <div class="inbox-empty-state">
-              <p>🎯 0 Genuine interview requests yet for <strong>${escapeHtml(currentActiveAccountFilter === 'all' ? 'this filter' : currentActiveAccountFilter)}</strong>, but <strong>${filteredAutomated.length} Automated Replies / System Acks</strong> have arrived!</p>
-              <button type="button" class="btn-tiny btn-accent" id="btnSwitchToAutoReplies" style="margin-top: 10px; cursor: pointer;">🤖 View ${filteredAutomated.length} Automated Replies ➔</button>
-            </div>
-          `;
-          const btn = document.getElementById('btnSwitchToAutoReplies');
-          if (btn) btn.addEventListener('click', () => switchInboxTab('automated'));
-        } else {
-          genuineResponsesList.innerHTML = `
-            <div class="inbox-empty-state">
-              <p>🎯 No genuine recruiter responses matched your current filter.</p>
-            </div>
-          `;
-        }
-      } else {
-        genuineResponsesList.innerHTML = pagedGenuine.map(item => {
-          let tagClass = 'accent';
-          if (item.tagType === 'success') tagClass = 'success';
-          if (item.tagType === 'warning') tagClass = 'warning';
-          if (item.tagType === 'info') tagClass = 'info';
-
-          return `
-            <div class="response-card genuine-card" data-id="${escapeHtml(item.id)}">
-              <div class="response-card-top">
-                <div class="response-card-badges">
-                  ${getAccountBadgeHtml(item.recipientAccount)}
-                  <span class="badge-tag-pill ${tagClass}">${escapeHtml(item.tag)}</span>
-                  ${item.actionPriority && item.actionPriority.includes('HIGH') ? '<span class="badge-priority-pill">HIGH PRIORITY</span>' : ''}
-                </div>
-                <div class="response-card-date">${escapeHtml(item.dateFormatted || item.date)}</div>
-              </div>
-              <div class="response-card-company-row">
-                <span class="response-card-company">${escapeHtml(item.company || 'Hiring Team')}</span>
-                <span class="response-card-sender">• ${escapeHtml(item.senderName)} &lt;${escapeHtml(item.senderEmail)}&gt;</span>
-              </div>
-              <div class="response-card-subject">${escapeHtml(item.subject)}</div>
-              <div class="response-card-snippet">${escapeHtml(item.bodySnippet)}</div>
-              <div class="response-card-actions">
-                <button type="button" class="btn-tiny btn-subtle btn-view-full" data-id="${escapeHtml(item.id)}" data-cat="genuine">👀 Read Full Message</button>
-                <a href="${escapeHtml(item.gmailSearchUrl)}" target="_blank" class="btn-open-gmail">📨 Reply in Gmail ↗</a>
-              </div>
-            </div>
-          `;
-        }).join('');
-      }
-    }
-
-    // Render Automated List
-    if (automatedResponsesList) {
-      if (filteredAutomated.length === 0) {
-        automatedResponsesList.innerHTML = `
-          <div class="inbox-empty-state">
-            <p>🤖 No automated responses matched your current filter.</p>
-          </div>
-        `;
-      } else {
-        automatedResponsesList.innerHTML = pagedAutomated.map(item => {
-          let tagClass = 'info';
-          if (item.tagType === 'warning') tagClass = 'warning';
-
-          return `
-            <div class="response-card automated-card" data-id="${escapeHtml(item.id)}">
-              <div class="response-card-top">
-                <div class="response-card-badges">
-                  ${getAccountBadgeHtml(item.recipientAccount)}
-                  <span class="badge-tag-pill ${tagClass}">${escapeHtml(item.tag)}</span>
-                </div>
-                <div class="response-card-date">${escapeHtml(item.dateFormatted || item.date)}</div>
-              </div>
-              <div class="response-card-company-row">
-                <span class="response-card-company">${escapeHtml(item.company || 'Company')}</span>
-                <span class="response-card-sender">• ${escapeHtml(item.senderName)}</span>
-              </div>
-              <div class="response-card-subject">${escapeHtml(item.subject)}</div>
-              <div class="response-card-snippet">${escapeHtml(item.bodySnippet)}</div>
-              <div class="response-card-actions">
-                <button type="button" class="btn-tiny btn-subtle btn-view-full" data-id="${escapeHtml(item.id)}" data-cat="automated">👀 View Content</button>
-                <a href="${escapeHtml(item.gmailSearchUrl)}" target="_blank" class="btn-open-gmail">📨 View in Gmail ↗</a>
-              </div>
-            </div>
-          `;
-        }).join('');
-      }
-    }
-  }
-
-  // Pagination navigation listeners
-  if (prevPageBtn) {
-    prevPageBtn.addEventListener('click', () => {
-      if (currentInboxPage > 1) {
-        currentInboxPage--;
-        renderResponseCards();
-      }
-    });
-  }
-  if (nextPageBtn) {
-    nextPageBtn.addEventListener('click', () => {
-      currentInboxPage++;
-      renderResponseCards();
-    });
-  }
-  if (footerPrevPageBtn) {
-    footerPrevPageBtn.addEventListener('click', () => {
-      if (currentInboxPage > 1) {
-        currentInboxPage--;
-        renderResponseCards();
-      }
-    });
-  }
-  if (footerNextPageBtn) {
-    footerNextPageBtn.addEventListener('click', () => {
-      currentInboxPage++;
-      renderResponseCards();
-    });
-  }
-  if (pageSizeSelect) {
-    pageSizeSelect.addEventListener('change', (e) => {
-      inboxPageSize = e.target.value === 'all' ? 'all' : parseInt(e.target.value, 10);
-      currentInboxPage = 1;
-      renderResponseCards();
-    });
-  }
-
-  // Column Stepper Navigation Listeners
-  [1, 2, 3, 4].forEach(idx => {
-    const prevBtn = document.getElementById(`colPrevBtn${idx}`);
-    const nextBtn = document.getElementById(`colNextBtn${idx}`);
-    if (prevBtn) {
-      prevBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        if (colPages[idx - 1] > 1) {
-          colPages[idx - 1]--;
-          renderResponseCards();
-        }
-      });
-    }
-    if (nextBtn) {
-      nextBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        colPages[idx - 1]++;
-        renderResponseCards();
-      });
-    }
-  });
-
-  // Sub-Tab Switcher (Keeps 4 Inboxes Side-by-Side in All Modes)
-  function switchInboxTab(tab) {
-    currentActiveInboxTab = tab;
-    colPages = [1, 1, 1, 1]; // Reset page steppers on tab switch
-
-    if (tab === 'side_by_side') {
-      if (tabModeSideBySide) tabModeSideBySide.classList.add('active');
-      if (tabNavGenuine) tabNavGenuine.classList.remove('active');
-      if (tabNavAutomated) tabNavAutomated.classList.remove('active');
-      if (cardFilterGenuine) cardFilterGenuine.classList.remove('active-metric');
-      if (cardFilterAutomated) cardFilterAutomated.classList.remove('active-metric');
-    } else if (tab === 'genuine') {
-      if (tabModeSideBySide) tabModeSideBySide.classList.remove('active');
-      if (tabNavGenuine) tabNavGenuine.classList.add('active');
-      if (tabNavAutomated) tabNavAutomated.classList.remove('active');
-      if (cardFilterGenuine) cardFilterGenuine.classList.add('active-metric');
-      if (cardFilterAutomated) cardFilterAutomated.classList.remove('active-metric');
+    let items = [];
+    if (currentActiveInboxTab === 'genuine') {
+      items = rawGenuine.filter(filterAccount).filter(filterSearch);
+    } else if (currentActiveInboxTab === 'automated') {
+      items = rawAutomated.filter(filterAccount).filter(filterSearch);
     } else {
-      if (tabModeSideBySide) tabModeSideBySide.classList.remove('active');
-      if (tabNavAutomated) tabNavAutomated.classList.add('active');
-      if (tabNavGenuine) tabNavGenuine.classList.remove('active');
-      if (cardFilterAutomated) cardFilterAutomated.classList.add('active-metric');
-      if (cardFilterGenuine) cardFilterGenuine.classList.remove('active-metric');
+      // 'all': merge genuine and automated, sort by date descending
+      const combined = [...rawGenuine, ...rawAutomated].filter(filterAccount).filter(filterSearch);
+      combined.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+      items = combined;
     }
 
-    // ALWAYS keep 4 inboxes side-by-side!
-    if (sideBySideColumnsContainer) sideBySideColumnsContainer.classList.remove('hidden');
-    if (singleListViewContainer) singleListViewContainer.classList.add('hidden');
+    // Update list summary text
+    if (inboxListSummary) {
+      const accText = currentActiveAccountFilter === 'all' ? 'across all 4 inboxes' : `for ${currentActiveAccountFilter}`;
+      const tabText = currentActiveInboxTab === 'all' ? 'all' : (currentActiveInboxTab === 'genuine' ? 'genuine HR' : 'automated');
+      inboxListSummary.textContent = `Showing ${items.length} ${tabText} email${items.length === 1 ? '' : 's'} ${accText}`;
+    }
 
-    renderResponseCards();
+    if (!responsesList) return;
+
+    if (items.length === 0) {
+      let emptyMsg = 'No emails found matching your filter.';
+      let switchBtn = '';
+      if (currentActiveInboxTab === 'genuine') {
+        const autoCount = rawAutomated.filter(filterAccount).length;
+        if (autoCount > 0) {
+          emptyMsg = `0 Genuine interview inquiries yet for <strong>${escapeHtml(currentActiveAccountFilter)}</strong>, but <strong>${autoCount} Auto-Replies</strong> received.`;
+          switchBtn = `<button type="button" class="btn-tiny btn-accent btn-switch-auto" style="margin-top: 10px; cursor: pointer;">🤖 View ${autoCount} Auto-Replies ➔</button>`;
+        }
+      }
+      responsesList.innerHTML = `
+        <div class="inbox-empty-state" style="padding: 36px 20px; text-align: center; background: rgba(15, 23, 42, 0.4); border-radius: 8px; border: 1px dashed rgba(255, 255, 255, 0.1);">
+          <div style="font-size: 32px; margin-bottom: 10px;">📬</div>
+          <p style="color: #cbd5e1; font-size: 14px;">${emptyMsg}</p>
+          ${switchBtn}
+        </div>
+      `;
+      const btn = responsesList.querySelector('.btn-switch-auto');
+      if (btn) btn.addEventListener('click', () => switchInboxTab('automated'));
+      return;
+    }
+
+    // Render full-width response cards
+    responsesList.innerHTML = items.map(item => {
+      const isGen = item.isGenuine;
+      const isSelected = activeExpandedCardId && activeExpandedCardId === item.id;
+      let cardCls = isGen ? 'genuine-card' : 'automated-card';
+      if (isSelected) cardCls += ' selected-reading-card';
+
+      let tagClass = isGen ? (item.tagType === 'warning' ? 'warning' : 'success') : 'info';
+      let badgeCategoryHtml = isGen 
+        ? `<span class="badge-tag-pill success">🎯 Genuine HR</span>`
+        : `<span class="badge-tag-pill info">🤖 Auto-Reply</span>`;
+
+      return `
+        <div class="response-card ${cardCls}" data-id="${escapeHtml(item.id)}" title="Click to open & read complete email in the reader box above">
+          <div class="response-card-top">
+            <div class="response-card-badges">
+              ${getAccountBadgeHtml(item.recipientAccount)}
+              ${badgeCategoryHtml}
+              <span class="badge-tag-pill ${tagClass}">${escapeHtml(item.tag || 'Reply')}</span>
+              ${(item.actionPriority && item.actionPriority.includes('HIGH')) ? '<span class="badge-priority-pill">HIGH</span>' : ''}
+              ${isSelected ? '<span class="badge-expanded-reading" style="font-size: 10px; background: rgba(56, 189, 248, 0.2); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.4); padding: 2px 7px; border-radius: 4px; font-weight: 700;">📖 READING NOW</span>' : ''}
+            </div>
+            <div class="response-card-date">${escapeHtml(item.dateFormatted || item.date)}</div>
+          </div>
+          <div class="response-card-company-row">
+            <span class="response-card-company">${escapeHtml(item.company || 'Company')}</span>
+            <span class="response-card-sender">• ${escapeHtml(item.senderName || 'Recruiter')} &lt;${escapeHtml(item.senderEmail || '')}&gt;</span>
+          </div>
+          <div class="response-card-subject"><strong>Subject:</strong> ${escapeHtml(item.subject || 'Application')}</div>
+          <div class="response-card-snippet">${escapeHtml(item.bodySnippet || '')}</div>
+          <div class="response-card-actions">
+            <button type="button" class="btn-tiny btn-subtle btn-trigger-reader" data-id="${escapeHtml(item.id)}" onclick="event.stopPropagation()">📖 Read Complete Email ▾</button>
+            <a href="${escapeHtml(item.gmailSearchUrl || '#')}" target="_blank" class="btn-open-gmail" onclick="event.stopPropagation()">📨 Reply in Gmail ↗</a>
+          </div>
+        </div>
+      `;
+    }).join('');
   }
 
-  if (tabModeSideBySide) tabModeSideBySide.addEventListener('click', () => switchInboxTab('side_by_side'));
-  if (tabNavGenuine) tabNavGenuine.addEventListener('click', () => switchInboxTab('genuine'));
-  if (tabNavAutomated) tabNavAutomated.addEventListener('click', () => switchInboxTab('automated'));
-  if (cardFilterGenuine) cardFilterGenuine.addEventListener('click', () => switchInboxTab('genuine'));
-  if (cardFilterAutomated) cardFilterAutomated.addEventListener('click', () => switchInboxTab('automated'));
-
-  // Account Switcher Pill Listeners
-  const accountPillBtns = document.querySelectorAll('#inboxAccountPills .account-pill-btn');
-  accountPillBtns.forEach(btn => {
-    btn.addEventListener('click', () => {
-      accountPillBtns.forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      currentActiveAccountFilter = btn.getAttribute('data-account') || 'all';
-      colPages = [1, 1, 1, 1]; // Reset page steppers
-      renderInboxView(currentInboxResponses);
-    });
-  });
-
-  if (inboxSearchInput) {
-    inboxSearchInput.addEventListener('input', () => {
-      colPages = [1, 1, 1, 1]; // Reset page steppers on search
-      renderResponseCards();
-    });
-  }
-
-  // Live Reader Pane Controller (Instant View on Card Click - Zero Scroll)
+  // Live Large Scrollable Reader Pane Controller
   function openEmailInReaderPane(item) {
     if (!item) return;
     currentOpenItem = item;
@@ -2795,27 +2366,29 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       if (readerDate) readerDate.textContent = item.dateFormatted || item.date;
       if (readerCompany) readerCompany.textContent = item.company || 'Hiring Team';
-      if (readerSender) readerSender.textContent = `• ${item.senderName} <${item.senderEmail}>`;
+      if (readerSender) readerSender.textContent = `• ${item.senderName || 'Recruiter'} <${item.senderEmail || ''}>`;
       if (readerSubject) readerSubject.textContent = item.subject || 'Application';
       if (readerBodyText) readerBodyText.textContent = item.bodySnippet || 'No message content available.';
       if (readerReplyGmailBtn) readerReplyGmailBtn.href = item.gmailSearchUrl || '#';
 
       inboxActiveReaderPane.classList.remove('hidden');
+
+      // Smooth scroll reader into view
+      inboxActiveReaderPane.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
 
-    // Re-render cards so active card expands right in place in its column
     renderResponseCards();
-    // Zero scrolling needed! View stays right on the 3 columns
   }
 
-  if (closeReaderPaneBtn) {
-    closeReaderPaneBtn.addEventListener('click', () => {
-      if (inboxActiveReaderPane) inboxActiveReaderPane.classList.add('hidden');
-      activeExpandedCardId = null;
-      currentOpenItem = null;
-      renderResponseCards();
-    });
+  function closeReaderPane() {
+    if (inboxActiveReaderPane) inboxActiveReaderPane.classList.add('hidden');
+    activeExpandedCardId = null;
+    currentOpenItem = null;
+    renderResponseCards();
   }
+
+  if (closeReaderPaneBtn) closeReaderPaneBtn.addEventListener('click', closeReaderPane);
+  if (readerCloseBottomBtn) readerCloseBottomBtn.addEventListener('click', closeReaderPane);
 
   if (readerCopyEmailBtn) {
     readerCopyEmailBtn.addEventListener('click', () => {
@@ -2837,69 +2410,69 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Delegated Click: Clicking ANY card in the 3 columns expands / collapses it inline
-  document.addEventListener('click', (e) => {
-    // 1. Collapse button inside expanded card
-    const collapseBtn = e.target.closest('.btn-collapse-card');
-    if (collapseBtn) {
-      e.stopPropagation();
-      activeExpandedCardId = null;
-      currentOpenItem = null;
-      if (inboxActiveReaderPane) inboxActiveReaderPane.classList.add('hidden');
-      renderResponseCards();
-      return;
-    }
+  // Filter Switcher
+  function switchInboxTab(tab) {
+    currentActiveInboxTab = tab;
+    renderInboxView(currentInboxResponses);
+  }
 
-    // 2. Copy recruiter email button
-    const copyEmailBtn = e.target.closest('.btn-copy-recruiter');
-    if (copyEmailBtn) {
-      e.stopPropagation();
-      const email = copyEmailBtn.getAttribute('data-email');
-      if (email) {
-        navigator.clipboard.writeText(email).then(() => {
-          showToast(`Copied ${email} to clipboard!`, 'success');
-        });
-      }
-      return;
-    }
+  if (tabNavAll) tabNavAll.addEventListener('click', () => switchInboxTab('all'));
+  if (tabNavGenuine) tabNavGenuine.addEventListener('click', () => switchInboxTab('genuine'));
+  if (tabNavAutomated) tabNavAutomated.addEventListener('click', () => switchInboxTab('automated'));
+  if (cardFilterGenuine) cardFilterGenuine.addEventListener('click', () => switchInboxTab('genuine'));
+  if (cardFilterAutomated) cardFilterAutomated.addEventListener('click', () => switchInboxTab('automated'));
 
-    // 3. Copy subject button
-    const copySubjBtn = e.target.closest('.btn-copy-subj');
-    if (copySubjBtn) {
-      e.stopPropagation();
-      const subj = copySubjBtn.getAttribute('data-subj');
-      if (subj) {
-        navigator.clipboard.writeText(subj).then(() => {
-          showToast(`Copied subject to clipboard!`, 'success');
-        });
-      }
-      return;
-    }
+  // Account Switcher Pill Listeners
+  const accountPillBtns = document.querySelectorAll('#inboxAccountPills .account-pill-btn');
+  accountPillBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      accountPillBtns.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      currentActiveAccountFilter = btn.getAttribute('data-account') || 'all';
 
-    // 4. Gmail reply link - allow native tab navigation
-    if (e.target.closest('.btn-open-gmail')) {
-      return;
-    }
-
-    // 5. Click on response card or "Read Email ▾" / "View Details"
-    const card = e.target.closest('.inbox-column-cards .response-card');
-    if (card) {
-      const id = card.getAttribute('data-id');
-      if (activeExpandedCardId === id) {
-        // Toggle collapsed if already active
-        activeExpandedCardId = null;
-        currentOpenItem = null;
-        if (inboxActiveReaderPane) inboxActiveReaderPane.classList.add('hidden');
-      } else {
-        activeExpandedCardId = id;
-        const allItems = [...(currentInboxResponses.genuine || []), ...(currentInboxResponses.automated || [])];
-        const item = allItems.find(x => x.id === id);
-        if (item) {
-          openEmailInReaderPane(item);
-          return;
+      // Auto-switch to 'all' if selected account has 0 genuine but has automated replies
+      if (currentActiveAccountFilter !== 'all' && currentActiveInboxTab === 'genuine') {
+        const stats = (currentInboxResponses.stats && currentInboxResponses.stats.accounts) ? currentInboxResponses.stats.accounts : {};
+        const accInfo = stats[currentActiveAccountFilter];
+        if (accInfo && accInfo.genuineCount === 0 && accInfo.automatedCount > 0) {
+          currentActiveInboxTab = 'all';
         }
       }
+
+      renderInboxView(currentInboxResponses);
+    });
+  });
+
+  if (inboxSearchInput) {
+    inboxSearchInput.addEventListener('input', () => {
       renderResponseCards();
+    });
+  }
+
+  // Delegated Click: Clicking ANY card opens it in the large scrollable reader pane!
+  document.addEventListener('click', (e) => {
+    // 1. Trigger reader button on card
+    const triggerBtn = e.target.closest('.btn-trigger-reader');
+    if (triggerBtn) {
+      e.stopPropagation();
+      const id = triggerBtn.getAttribute('data-id');
+      const allItems = [...(currentInboxResponses.genuine || []), ...(currentInboxResponses.automated || [])];
+      const item = allItems.find(x => x.id === id);
+      if (item) openEmailInReaderPane(item);
+      return;
+    }
+
+    // 2. Click directly on response card
+    const card = e.target.closest('#responsesList .response-card');
+    if (card) {
+      const id = card.getAttribute('data-id');
+      if (activeExpandedCardId === id && inboxActiveReaderPane && !inboxActiveReaderPane.classList.contains('hidden')) {
+        closeReaderPane();
+      } else {
+        const allItems = [...(currentInboxResponses.genuine || []), ...(currentInboxResponses.automated || [])];
+        const item = allItems.find(x => x.id === id);
+        if (item) openEmailInReaderPane(item);
+      }
       return;
     }
   });

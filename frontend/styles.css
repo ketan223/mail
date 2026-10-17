@@ -3826,19 +3826,34 @@ textarea {
 }
 
 .reader-body-container {
-  background: rgba(10, 15, 29, 0.95);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 6px;
-  padding: 16px;
-  max-height: 340px;
+  background: #080d1a;
+  border: 1px solid rgba(56, 189, 248, 0.28);
+  border-radius: 8px;
+  padding: 22px 24px;
+  max-height: 520px;
+  min-height: 250px;
   overflow-y: auto;
-  margin-bottom: 14px;
+  margin-bottom: 16px;
+  scrollbar-width: thin;
+  scrollbar-color: #38bdf8 #0f172a;
+}
+
+.reader-body-container::-webkit-scrollbar {
+  width: 8px;
+}
+.reader-body-container::-webkit-scrollbar-track {
+  background: #0f172a;
+  border-radius: 4px;
+}
+.reader-body-container::-webkit-scrollbar-thumb {
+  background: #38bdf8;
+  border-radius: 4px;
 }
 
 .reader-body-text {
-  font-size: 13px;
-  line-height: 1.6;
-  color: #e2e8f0;
+  font-size: 14.5px;
+  line-height: 1.75;
+  color: #f8fafc;
   white-space: pre-wrap;
   word-break: break-word;
   font-family: inherit;
@@ -4006,11 +4021,19 @@ textarea {
   padding: 16px 18px;
   transition: all 0.2s ease;
   position: relative;
+  cursor: pointer;
 }
 
 .response-card:hover {
-  border-color: rgba(255, 255, 255, 0.25);
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
+  border-color: rgba(56, 189, 248, 0.45);
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.35);
+  transform: translateY(-1px);
+}
+
+.response-card.selected-reading-card {
+  border-color: #38bdf8 !important;
+  box-shadow: 0 0 20px rgba(56, 189, 248, 0.35) !important;
+  background: linear-gradient(90deg, rgba(56, 189, 248, 0.08) 0%, rgba(17, 24, 39, 1) 15%) !important;
 }
 
 .genuine-card {

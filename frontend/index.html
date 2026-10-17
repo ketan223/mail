@@ -999,219 +999,63 @@ Ketan Tiwari
         <!-- Filter Toolbar -->
         <div class="inbox-toolbar">
           <div class="inbox-nav-tabs">
-            <button type="button" class="inbox-tab-nav active" id="tabNavGenuine">
-              🎯 Genuine Only (<span id="countBadgeGenuine">0</span>)
+            <button type="button" class="inbox-tab-nav active" id="tabNavAll">
+              📬 All Emails (<span id="countBadgeAll">0</span>)
             </button>
-            <button type="button" class="inbox-tab-nav" id="tabModeSideBySide">
-              ☷ All 4 Inboxes Side-by-Side
+            <button type="button" class="inbox-tab-nav" id="tabNavGenuine">
+              🎯 Genuine HR (<span id="countBadgeGenuine">0</span>)
             </button>
             <button type="button" class="inbox-tab-nav" id="tabNavAutomated">
-              🤖 Auto-Replies Only (<span id="countBadgeAutomated">0</span>)
+              🤖 Auto-Replies (<span id="countBadgeAutomated">0</span>)
             </button>
           </div>
           <div class="inbox-search-wrap">
-            <input type="text" id="inboxSearchInput" placeholder="🔍 Filter all 4 inboxes by company, recruiter name, or keywords...">
+            <input type="text" id="inboxSearchInput" placeholder="🔍 Search emails by company, recruiter, subject...">
           </div>
         </div>
 
-        <!-- 4-COLUMN SIDE-BY-SIDE GRID VIEW (DEFAULT) -->
-        <div id="sideBySideColumnsContainer" class="inbox-multi-columns-grid">
-          <!-- Column 1: Sender 1 -->
-          <div class="inbox-account-column" id="colAccount1">
-            <div class="inbox-column-header">
-              <div class="inbox-column-header-top">
-                <span class="inbox-column-title">
-                  <span class="pill-badge-dot dot-acc1"></span>
-                  Sender 1
-                </span>
-                <span class="badge-account-pill acc-tiwari">Sender 1</span>
-              </div>
-              <div class="inbox-column-stats-row">
-                <div class="col-stats-left">
-                  <span class="col-stat-pill pill-gen">🎯 <strong id="colGenCount1">0</strong> Genuine</span>
-                  <span class="col-stat-pill pill-auto">🤖 <strong id="colAutoCount1">0</strong> Auto</span>
-                </div>
-                <div class="col-stepper" id="colStepper1">
-                  <span class="col-stepper-info" id="colStepperInfo1">1–5 of 0</span>
-                  <div class="col-stepper-btns">
-                    <button type="button" class="btn-step" id="colPrevBtn1" title="Previous page">◀</button>
-                    <button type="button" class="btn-step" id="colNextBtn1" title="Next page">▶</button>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div class="inbox-column-cards" id="colCards1">
-              <div class="inbox-loading-placeholder">Loading responses...</div>
-            </div>
-          </div>
-
-          <!-- Column 2: Sender 2 -->
-          <div class="inbox-account-column" id="colAccount2">
-            <div class="inbox-column-header">
-              <div class="inbox-column-header-top">
-                <span class="inbox-column-title">
-                  <span class="pill-badge-dot dot-acc2"></span>
-                  Sender 2
-                </span>
-                <span class="badge-account-pill acc-creative">Sender 2</span>
-              </div>
-              <div class="inbox-column-stats-row">
-                <div class="col-stats-left">
-                  <span class="col-stat-pill pill-gen">🎯 <strong id="colGenCount2">0</strong> Genuine</span>
-                  <span class="col-stat-pill pill-auto">🤖 <strong id="colAutoCount2">0</strong> Auto</span>
-                </div>
-                <div class="col-stepper" id="colStepper2">
-                  <span class="col-stepper-info" id="colStepperInfo2">1–5 of 0</span>
-                  <div class="col-stepper-btns">
-                    <button type="button" class="btn-step" id="colPrevBtn2" title="Previous page">◀</button>
-                    <button type="button" class="btn-step" id="colNextBtn2" title="Next page">▶</button>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div class="inbox-column-cards" id="colCards2">
-              <div class="inbox-loading-placeholder">Loading responses...</div>
-            </div>
-          </div>
-
-          <!-- Column 3: Sender 3 -->
-          <div class="inbox-account-column" id="colAccount3">
-            <div class="inbox-column-header">
-              <div class="inbox-column-header-top">
-                <span class="inbox-column-title">
-                  <span class="pill-badge-dot dot-acc3"></span>
-                  Sender 3
-                </span>
-                <span class="badge-account-pill acc-devil">Sender 3</span>
-              </div>
-              <div class="inbox-column-stats-row">
-                <div class="col-stats-left">
-                  <span class="col-stat-pill pill-gen">🎯 <strong id="colGenCount3">0</strong> Genuine</span>
-                  <span class="col-stat-pill pill-auto">🤖 <strong id="colAutoCount3">0</strong> Auto</span>
-                </div>
-                <div class="col-stepper" id="colStepper3">
-                  <span class="col-stepper-info" id="colStepperInfo3">1–5 of 0</span>
-                  <div class="col-stepper-btns">
-                    <button type="button" class="btn-step" id="colPrevBtn3" title="Previous page">◀</button>
-                    <button type="button" class="btn-step" id="colNextBtn3" title="Next page">▶</button>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div class="inbox-column-cards" id="colCards3">
-              <div class="inbox-loading-placeholder">Loading responses...</div>
-            </div>
-          </div>
-
-          <!-- Column 4: Sender 4 -->
-          <div class="inbox-account-column" id="colAccount4">
-            <div class="inbox-column-header">
-              <div class="inbox-column-header-top">
-                <span class="inbox-column-title">
-                  <span class="pill-badge-dot dot-acc4"></span>
-                  Sender 4
-                </span>
-                <span class="badge-account-pill acc-ketan181">Sender 4</span>
-              </div>
-              <div class="inbox-column-stats-row">
-                <div class="col-stats-left">
-                  <span class="col-stat-pill pill-gen">🎯 <strong id="colGenCount4">0</strong> Genuine</span>
-                  <span class="col-stat-pill pill-auto">🤖 <strong id="colAutoCount4">0</strong> Auto</span>
-                </div>
-                <div class="col-stepper" id="colStepper4">
-                  <span class="col-stepper-info" id="colStepperInfo4">1–5 of 0</span>
-                  <div class="col-stepper-btns">
-                    <button type="button" class="btn-step" id="colPrevBtn4" title="Previous page">◀</button>
-                    <button type="button" class="btn-step" id="colNextBtn4" title="Next page">▶</button>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div class="inbox-column-cards" id="colCards4">
-              <div class="inbox-loading-placeholder">Loading responses...</div>
-            </div>
-          </div>
-        </div>
-
-        <!-- ACTIVE EMAIL LIVE READER DECK (Instant view on card click - Zero scroll needed) -->
+        <!-- 📖 ACTIVE EMAIL LIVE LARGE READER BOX ("Pura bada sa box type ek hi dikhe and main scroll kar sakay") -->
         <div id="inboxActiveReaderPane" class="inbox-reader-pane hidden">
           <div class="reader-pane-header">
             <div class="reader-header-left">
               <span class="reader-pulse-dot"></span>
-              <span class="reader-account-badge" id="readerAccountBadge">📬 Sender Account</span>
               <span class="reader-category-pill" id="readerCategoryPill">🎯 Genuine HR</span>
               <span class="reader-priority-pill" id="readerPriorityPill">HIGH</span>
+              <span class="reader-account-badge" id="readerAccountBadge">📬 Sender Account</span>
             </div>
             <div class="reader-header-right">
-              <span class="reader-date" id="readerDate">9 Oct, 09:31 pm</span>
+              <span class="reader-date" id="readerDate">Date</span>
               <button type="button" class="btn-micro" id="closeReaderPaneBtn">✕ Close Reader</button>
             </div>
           </div>
           <div class="reader-meta-box">
-            <div class="reader-company-line">
-              <strong id="readerCompany">Company Name</strong>
-              <span id="readerSender">• Recruiter Name &lt;recruiter@company.com&gt;</span>
-            </div>
             <div class="reader-subject-line">
               <span class="reader-subj-label">Subject:</span>
-              <span id="readerSubject">Application Subject</span>
+              <strong id="readerSubject" style="font-size: 16.5px; color: #ffffff;">Application Subject</strong>
+            </div>
+            <div class="reader-company-line" style="margin-top: 8px;">
+              <strong id="readerCompany" style="color: #38bdf8; font-size: 15px;">Company Name</strong>
+              <span id="readerSender" style="color: #cbd5e1;">• Recruiter Name &lt;recruiter@company.com&gt;</span>
             </div>
           </div>
-          <div class="reader-body-container">
+          <div class="reader-body-container" id="readerBodyContainer">
             <div id="readerBodyText" class="reader-body-text">Loading message content...</div>
           </div>
           <div class="reader-actions-bar">
             <a href="#" target="_blank" class="btn-primary btn-reader-reply" id="readerReplyGmailBtn">📨 Reply in Gmail ↗</a>
             <button type="button" class="btn-tiny btn-subtle" id="readerCopyEmailBtn">📋 Copy Recruiter Email</button>
             <button type="button" class="btn-tiny btn-subtle" id="readerCopySubjectBtn">📋 Copy Subject</button>
+            <button type="button" class="btn-tiny btn-secondary" id="readerCloseBottomBtn">✕ Close Reader</button>
           </div>
         </div>
 
-        <!-- SINGLE LIST VIEW CONTAINER (PAGINATED) -->
-        <div id="singleListViewContainer" class="hidden">
-          <!-- Pagination Controls Bar (Top) -->
-          <div class="inbox-pagination-bar" id="inboxPaginationTop">
-            <div class="pagination-info">
-              <span>Showing <strong id="pageRangeStart">0</strong>–<strong id="pageRangeEnd">0</strong> of <strong id="pageTotalCount">0</strong> responses</span>
-              <span class="pagination-sub">(Page-by-page • Zero stuck scroll)</span>
-            </div>
-            <div class="pagination-controls">
-              <button type="button" class="page-nav-btn" id="prevPageBtn" disabled>◀ Prev</button>
-              <div class="page-pills" id="pagePillsTop"></div>
-              <button type="button" class="page-nav-btn" id="nextPageBtn" disabled>Next ▶</button>
-            </div>
-            <div class="page-size-selector">
-              <label for="pageSizeSelect">Cards/page:</label>
-              <select id="pageSizeSelect" class="page-select-input">
-                <option value="6">6 (Fits On Screen)</option>
-                <option value="10" selected>10 cards</option>
-                <option value="15">15 cards</option>
-                <option value="25">25 cards</option>
-                <option value="all">All</option>
-              </select>
-            </div>
+        <!-- CLEAN UNIFIED EMAIL LIST ("Sirf email dikha") -->
+        <div id="singleListViewContainer" class="inbox-email-list-wrapper">
+          <div class="inbox-list-header-bar" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding: 0 4px;">
+            <span class="inbox-list-summary" id="inboxListSummary" style="font-size: 12.5px; color: #94a3b8; font-weight: 500;">Showing 0 emails</span>
           </div>
-
-          <!-- Section 1: Genuine HR Responses List -->
-          <div id="genuineResponsesList" class="responses-list-container">
-            <div class="inbox-loading-placeholder">Loading recruiter responses from inbox...</div>
-          </div>
-
-          <!-- Section 2: Automated Responses List -->
-          <div id="automatedResponsesList" class="responses-list-container hidden">
-            <div class="inbox-loading-placeholder">Loading automated responses...</div>
-          </div>
-
-          <!-- Pagination Controls Bar (Bottom) -->
-          <div class="inbox-pagination-bar inbox-pagination-footer" id="inboxPaginationBottom">
-            <div class="pagination-info">
-              <span>Page <strong id="footerCurrentPage">1</strong> of <strong id="footerTotalPages">1</strong></span>
-            </div>
-            <div class="pagination-controls">
-              <button type="button" class="page-nav-btn" id="footerPrevPageBtn" disabled>◀ Prev</button>
-              <div class="page-pills" id="pagePillsBottom"></div>
-              <button type="button" class="page-nav-btn" id="footerNextPageBtn" disabled>Next ▶</button>
-            </div>
+          <div id="responsesList" class="responses-list-container">
+            <div class="inbox-loading-placeholder">Loading email responses...</div>
           </div>
         </div>
       </section>
