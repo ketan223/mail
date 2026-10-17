@@ -44,6 +44,16 @@ document.addEventListener('DOMContentLoaded', () => {
   const metricSkipped = document.getElementById('metricSkipped');
   const metricFailed = document.getElementById('metricFailed');
 
+  // DOM Elements - Dry Run & RFC 5321 Validation Radar
+  const autoDryRunCheckbox = document.getElementById('autoDryRunCheckbox');
+  const manualDryRunCheckbox = document.getElementById('manualDryRunCheckbox');
+  const refreshValidationStatsBtn = document.getElementById('refreshValidationStatsBtn');
+  const vstatValid = document.getElementById('vstatValid');
+  const vstatInvalid = document.getElementById('vstatInvalid');
+  const vstatSuppressed = document.getElementById('vstatSuppressed');
+  const vstatPending = document.getElementById('vstatPending');
+  const vstatTempFail = document.getElementById('vstatTempFail');
+
   // DOM Elements - Resume Dropzone
   const resumeDropzone = document.getElementById('resumeDropzone');
   const resumeFileInput = document.getElementById('resumeFileInput');
@@ -156,7 +166,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
       if (data.success) {
         smtpStatusBadge.className = 'status-indicator online';
-        smtpStatusBadge.querySelector('.status-text').textContent = `Ready: ${data.user}`;
+        const label = data.summary || (data.accounts ? `${data.accounts.length}/${data.totalCount || 3} Senders Active` : `Ready: ${data.user}`);
+        smtpStatusBadge.querySelector('.status-text').textContent = `Ready: ${label}`;
+        smtpStatusBadge.title = `Verified Accounts: ${data.user}`;
       } else {
         smtpStatusBadge.className = 'status-indicator offline';
         smtpStatusBadge.querySelector('.status-text').textContent = 'SMTP Auth Failed';
@@ -325,6 +337,7 @@ document.addEventListener('DOMContentLoaded', () => {
       let msg = emailMessageInput.value
         .replace(/{{\s*name\s*}}/gi, sampleName)
         .replace(/{{\s*company\s*}}/gi, sampleCompany)
+        .replace(/{{\s*(sender_email|email|my_email)\s*}}/gi, 'sender@yourdomain.com [Auto-swaps to sending account]')
         .replace(/^Dear\s+Hiring\s+Manager,/i, `Dear ${sampleName},`)
         .replace(/at\s+your\s+company/gi, `at ${sampleCompany}`);
       previewBody.textContent = msg;
@@ -354,6 +367,11 @@ document.addEventListener('DOMContentLoaded', () => {
     fileNameDisplay.textContent = file.name;
     fileSizeDisplay.textContent = formatBytes(file.size);
 
+    const autoResumeName = document.getElementById('autoResumeNameDisplay');
+    const autoResumeSize = document.getElementById('autoResumeSizeDisplay');
+    if (autoResumeName) autoResumeName.textContent = file.name;
+    if (autoResumeSize) autoResumeSize.textContent = `Attached from local upload (${formatBytes(file.size)})`;
+
     dropzoneEmpty.classList.add('hidden');
     dropzoneFilled.classList.remove('hidden');
     showToast(`Attached: ${file.name}`, 'success');
@@ -372,6 +390,12 @@ document.addEventListener('DOMContentLoaded', () => {
         dropzoneEmpty.classList.add('hidden');
         dropzoneFilled.classList.remove('hidden');
         hasPreloadedResume = true;
+
+        const autoResumeName = document.getElementById('autoResumeNameDisplay');
+        const autoResumeSize = document.getElementById('autoResumeSizeDisplay');
+        if (autoResumeName) autoResumeName.textContent = data.filename;
+        if (autoResumeSize) autoResumeSize.textContent = `Pre-loaded from workspace root (${formatBytes(data.size)})`;
+
         // Auto-extract candidate profile from preloaded resume
         extractResumeProfile();
       }
@@ -498,6 +522,30 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch (err) {
       contactsTableBody.innerHTML = `<tr><td colspan="6" class="empty-state">Error loading contacts: ${err.message}</td></tr>`;
     }
+  }
+
+  async function loadValidationStats() {
+    try {
+      const res = await fetch(`${API_BASE}/api/validation/stats`);
+      const data = await res.json();
+      if (data && data.success && data.stats) {
+        const s = data.stats;
+        if (vstatValid) vstatValid.textContent = s.valid || 0;
+        if (vstatInvalid) vstatInvalid.textContent = s.invalid || 0;
+        if (vstatSuppressed) vstatSuppressed.textContent = s.suppressed || 0;
+        if (vstatPending) vstatPending.textContent = s.pendingVerification || 0;
+        if (vstatTempFail) vstatTempFail.textContent = s.temporaryFailures || 0;
+      }
+    } catch (err) {
+      console.warn('Failed to load validation stats:', err.message);
+    }
+  }
+
+  if (refreshValidationStatsBtn) {
+    refreshValidationStatsBtn.addEventListener('click', async () => {
+      await loadValidationStats();
+      showToast('RFC 5321 deliverability stats updated!', 'info');
+    });
   }
 
   function applyFilter() {
@@ -1000,6 +1048,8 @@ document.addEventListener('DOMContentLoaded', () => {
     formData.append('batchSize', batchSize.toString());
     formData.append('pauseMinutes', pauseMinutes.toString());
     formData.append('recipients', JSON.stringify(recipientsList));
+    const isDryRun = manualDryRunCheckbox ? manualDryRunCheckbox.checked : false;
+    formData.append('dryRun', isDryRun);
 
     try {
       startCampaignBtn.disabled = true;
@@ -1118,9 +1168,14 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       // Countdown display
-      const mins = Math.floor(status.secondsUntilNext / 60);
-      const secs = status.secondsUntilNext % 60;
-      countdownTimer.textContent = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+      const mins = Math.max(0, Math.floor(status.secondsUntilNext / 60));
+      const secs = Math.max(0, status.secondsUntilNext % 60);
+      if (status.secondsUntilNext <= 0) {
+        countdownTimer.textContent = 'Preparing...';
+        if (countdownSubText) countdownSubText.textContent = '🚀 Preparing next batch candidates & verifying DNS MX...';
+      } else {
+        countdownTimer.textContent = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+      }
     } else if (status.status === 'paused') {
       autopilotStatusText.textContent = `Campaign Paused`;
       pauseCampaignBtn.classList.add('hidden');
@@ -1434,13 +1489,2173 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // -------------------------------------------------------------
+  // 13. Autonomous 100% Hands-Free AI Outreach Controller
+  // -------------------------------------------------------------
+  const modeAutonomousBtn = document.getElementById('modeAutonomousBtn');
+  const modeManualBtn = document.getElementById('modeManualBtn');
+  const modeInboxBtn = document.getElementById('modeInboxBtn');
+  const modeBouncesBtn = document.getElementById('modeBouncesBtn');
+  const autonomousView = document.getElementById('autonomousView');
+  const manualWorkspaceGrid = document.getElementById('manualWorkspaceGrid');
+  const inboxView = document.getElementById('inboxView');
+  const bouncesView = document.getElementById('bouncesView');
+  const autoGoToInboxBtn = document.getElementById('autoGoToInboxBtn');
+
+  // Mode Switcher (Autonomous AI, Manual Campaign, Recruiter Responses, Bounce Cleaner)
+  function switchToMode(mode) {
+    if (mode === 'autonomous') {
+      if (modeAutonomousBtn) modeAutonomousBtn.classList.add('active');
+      if (modeManualBtn) modeManualBtn.classList.remove('active');
+      if (modeInboxBtn) modeInboxBtn.classList.remove('active');
+      if (modeBouncesBtn) modeBouncesBtn.classList.remove('active');
+      if (autonomousView) autonomousView.classList.remove('hidden');
+      if (manualWorkspaceGrid) manualWorkspaceGrid.classList.add('hidden');
+      if (inboxView) inboxView.classList.add('hidden');
+      if (bouncesView) bouncesView.classList.add('hidden');
+    } else if (mode === 'manual') {
+      if (modeManualBtn) modeManualBtn.classList.add('active');
+      if (modeAutonomousBtn) modeAutonomousBtn.classList.remove('active');
+      if (modeInboxBtn) modeInboxBtn.classList.remove('active');
+      if (modeBouncesBtn) modeBouncesBtn.classList.remove('active');
+      if (manualWorkspaceGrid) manualWorkspaceGrid.classList.remove('hidden');
+      if (autonomousView) autonomousView.classList.add('hidden');
+      if (inboxView) inboxView.classList.add('hidden');
+      if (bouncesView) bouncesView.classList.add('hidden');
+    } else if (mode === 'inbox') {
+      if (modeInboxBtn) modeInboxBtn.classList.add('active');
+      if (modeAutonomousBtn) modeAutonomousBtn.classList.remove('active');
+      if (modeManualBtn) modeManualBtn.classList.remove('active');
+      if (modeBouncesBtn) modeBouncesBtn.classList.remove('active');
+      if (inboxView) inboxView.classList.remove('hidden');
+      if (autonomousView) autonomousView.classList.add('hidden');
+      if (manualWorkspaceGrid) manualWorkspaceGrid.classList.add('hidden');
+      if (bouncesView) bouncesView.classList.add('hidden');
+      loadInboxResponses();
+    } else if (mode === 'bounces') {
+      if (modeBouncesBtn) modeBouncesBtn.classList.add('active');
+      if (modeAutonomousBtn) modeAutonomousBtn.classList.remove('active');
+      if (modeManualBtn) modeManualBtn.classList.remove('active');
+      if (modeInboxBtn) modeInboxBtn.classList.remove('active');
+      if (bouncesView) bouncesView.classList.remove('hidden');
+      if (autonomousView) autonomousView.classList.add('hidden');
+      if (manualWorkspaceGrid) manualWorkspaceGrid.classList.add('hidden');
+      if (inboxView) inboxView.classList.add('hidden');
+      loadBounceScanner();
+    }
+  }
+
+  if (modeAutonomousBtn) modeAutonomousBtn.addEventListener('click', () => switchToMode('autonomous'));
+  if (modeManualBtn) modeManualBtn.addEventListener('click', () => switchToMode('manual'));
+  if (modeInboxBtn) modeInboxBtn.addEventListener('click', () => switchToMode('inbox'));
+  if (modeBouncesBtn) modeBouncesBtn.addEventListener('click', () => switchToMode('bounces'));
+  if (autoGoToInboxBtn) autoGoToInboxBtn.addEventListener('click', () => switchToMode('inbox'));
+
+  // Autonomous Resume Upload
+  const autoChangeResumeBtn = document.getElementById('autoChangeResumeBtn');
+  const autoResumeFileInput = document.getElementById('autoResumeFileInput');
+  if (autoChangeResumeBtn && autoResumeFileInput) {
+    autoChangeResumeBtn.addEventListener('click', () => autoResumeFileInput.click());
+    autoResumeFileInput.addEventListener('change', (e) => {
+      if (e.target.files && e.target.files.length > 0) {
+        handleResumeSelection(e.target.files[0]);
+      }
+    });
+  }
+
+  // Pitch Collapsible Toggle
+  const autoTogglePitchBtn = document.getElementById('autoTogglePitchBtn');
+  const autoPitchBody = document.getElementById('autoPitchBody');
+  const autoPitchArrow = document.getElementById('autoPitchArrow');
+  if (autoTogglePitchBtn && autoPitchBody && autoPitchArrow) {
+    autoTogglePitchBtn.addEventListener('click', () => {
+      autoPitchBody.classList.toggle('hidden');
+      autoPitchArrow.classList.toggle('open');
+    });
+  }
+
+  // Autonomous Form Controls
+  const autoLocationSelect = document.getElementById('autoLocationSelect');
+  const autoBatchSizeInput = document.getElementById('autoBatchSizeInput');
+  const autoPauseMinutesSelect = document.getElementById('autoPauseMinutesSelect');
+  const autoSenderName = document.getElementById('autoSenderName');
+  const autoSubject = document.getElementById('autoSubject');
+  const autoMessage = document.getElementById('autoMessage');
+
+  // Autonomous Actions & Badges
+  const startAutonomousBtn = document.getElementById('startAutonomousBtn');
+  const startAutonomousBtnLabel = document.getElementById('startAutonomousBtnLabel');
+  const pauseAutonomousBtn = document.getElementById('pauseAutonomousBtn');
+  const skipBreakAutonomousBtn = document.getElementById('skipBreakAutonomousBtn');
+  const stopAutonomousBtn = document.getElementById('stopAutonomousBtn');
+
+  const autoStatusBadge = document.getElementById('autoStatusBadge');
+  const autoStatusText = document.getElementById('autoStatusText');
+  const autoClockCard = document.getElementById('autoClockCard');
+  const autoClockTimer = document.getElementById('autoClockTimer');
+  const autoClockSub = document.getElementById('autoClockSub');
+
+  // Dual Stream Metric Displays
+  const autoMetricIndiaSent = document.getElementById('autoMetricIndiaSent');
+  const autoIndiaSlash = document.getElementById('autoIndiaSlash');
+  const autoIndiaPct = document.getElementById('autoIndiaPct');
+  const autoIndiaProgressFill = document.getElementById('autoIndiaProgressFill');
+  const autoIndiaRemaining = document.getElementById('autoIndiaRemaining');
+  const autoIndiaLimitBadge = document.getElementById('autoIndiaLimitBadge');
+
+  const autoMetricForeignSent = document.getElementById('autoMetricForeignSent');
+  const autoForeignSlash = document.getElementById('autoForeignSlash');
+  const autoForeignPct = document.getElementById('autoForeignPct');
+  const autoForeignProgressFill = document.getElementById('autoForeignProgressFill');
+  const autoForeignRemaining = document.getElementById('autoForeignRemaining');
+  const autoForeignLimitBadge = document.getElementById('autoForeignLimitBadge');
+  const autoBatchProgressFill = document.getElementById('autoBatchProgressFill');
+
+  // Autonomous Metric Displays
+  const autoMetricSentToday = document.getElementById('autoMetricSentToday');
+  const autoDailyProgressFill = document.getElementById('autoDailyProgressFill');
+  const autoMetricBatchProgress = document.getElementById('autoMetricBatchProgress');
+  const autoMetricBatchLimit = document.getElementById('autoMetricBatchLimit');
+  const autoMetricBatchSub = document.getElementById('autoMetricBatchSub');
+  const autoMetricLifetimeDelivered = document.getElementById('autoMetricLifetimeDelivered');
+  const autoMetricLifetimeFiltered = document.getElementById('autoMetricLifetimeFiltered');
+
+  // Autonomous Live Terminal
+  const autoTerminalBody = document.getElementById('autoTerminalBody');
+  const autoTerminalScrollCheck = document.getElementById('autoTerminalScrollCheck');
+  const clearAutoTerminalBtn = document.getElementById('clearAutoTerminalBtn');
+
+  let lastRenderedLiveLogCount = 0;
+
+  // Start Autonomous Outreach
+  if (startAutonomousBtn) {
+    startAutonomousBtn.addEventListener('click', async () => {
+      try {
+        startAutonomousBtn.disabled = true;
+        if (startAutonomousBtnLabel) startAutonomousBtnLabel.textContent = 'Initializing Autonomous Engine...';
+
+        const formData = new FormData();
+        if (resumeFile) {
+          formData.append('resume', resumeFile);
+        }
+        formData.append('senderName', (autoSenderName ? autoSenderName.value : '') || 'Ketan Tiwari');
+        formData.append('subject', (autoSubject ? autoSubject.value : '') || 'Application: Software Engineering & AI Intern - Ketan Tiwari - {{company}}');
+        formData.append('message', (autoMessage ? autoMessage.value : '') || '');
+        formData.append('batchSize', (autoBatchSizeInput ? autoBatchSizeInput.value : '') || 60);
+        formData.append('pauseMinutes', (autoPauseMinutesSelect ? autoPauseMinutesSelect.value : '') || 6);
+        formData.append('location', (autoLocationSelect ? autoLocationSelect.value : '') || 'all');
+        formData.append('dailyLimit', 400);
+        const isDryRun = autoDryRunCheckbox ? autoDryRunCheckbox.checked : false;
+        formData.append('dryRun', isDryRun);
+
+        const res = await fetch(`${API_BASE}/api/autonomous/start`, {
+          method: 'POST',
+          body: formData
+        });
+        const data = await res.json();
+        if (data.success) {
+          showToast(data.message, 'success');
+          syncAutonomousStatus(data.status);
+        } else {
+          showToast(data.error || 'Failed to start autonomous engine.', 'error');
+          startAutonomousBtn.disabled = false;
+          if (startAutonomousBtnLabel) startAutonomousBtnLabel.textContent = 'Start 100% Autonomous Outreach';
+        }
+      } catch (err) {
+        showToast('Autonomous start failed: ' + err.message, 'error');
+        startAutonomousBtn.disabled = false;
+        if (startAutonomousBtnLabel) startAutonomousBtnLabel.textContent = 'Start 100% Autonomous Outreach';
+      }
+    });
+  }
+
+  // Pause
+  if (pauseAutonomousBtn) {
+    pauseAutonomousBtn.addEventListener('click', async () => {
+      try {
+        const res = await fetch(`${API_BASE}/api/autonomous/pause`, { method: 'POST' });
+        const data = await res.json();
+        if (data.success) {
+          showToast('Autonomous engine paused.', 'info');
+          syncAutonomousStatus(data.status);
+        }
+      } catch (e) {
+        showToast(e.message, 'error');
+      }
+    });
+  }
+
+  // Skip Break & Send Now / Resume
+  if (skipBreakAutonomousBtn) {
+    skipBreakAutonomousBtn.addEventListener('click', async () => {
+      try {
+        const res = await fetch(`${API_BASE}/api/autonomous/resume`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ immediate: true })
+        });
+        const data = await res.json();
+        if (data.success) {
+          showToast('Triggering next batch immediately!', 'success');
+          syncAutonomousStatus(data.status);
+        }
+      } catch (e) {
+        showToast(e.message, 'error');
+      }
+    });
+  }
+
+  // Stop Engine
+  if (stopAutonomousBtn) {
+    stopAutonomousBtn.addEventListener('click', async () => {
+      if (!confirm('Are you sure you want to stop the autonomous engine?')) return;
+      try {
+        const res = await fetch(`${API_BASE}/api/autonomous/stop`, { method: 'POST' });
+        const data = await res.json();
+        if (data.success) {
+          showToast('Autonomous engine stopped.', 'info');
+          syncAutonomousStatus(data.status);
+        }
+      } catch (e) {
+        showToast(e.message, 'error');
+      }
+    });
+  }
+
+  // Clear Terminal
+  if (clearAutoTerminalBtn && autoTerminalBody) {
+    clearAutoTerminalBtn.addEventListener('click', () => {
+      autoTerminalBody.innerHTML = '<div class="terminal-line terminal-dim">[TERMINAL CLEARED] Standing by for new events...</div>';
+      lastRenderedLiveLogCount = 0;
+    });
+  }
+
+  // Poll Autonomous Status
+  async function pollAutonomousStatus() {
+    try {
+      const res = await fetch(`${API_BASE}/api/autonomous/status`);
+      const status = await res.json();
+      syncAutonomousStatus(status);
+    } catch (e) {}
+  }
+
+  function syncAutonomousStatus(status) {
+    if (!status) return;
+
+    // 1. Status Badge & Action Controls
+    if (autoStatusBadge) autoStatusBadge.className = `auto-status-badge ${status.status}`;
+    const isRunning = status.status === 'running_batch';
+    const isWaiting = status.status === 'waiting_pause';
+    const isPaused = status.status === 'paused';
+    const isLimitReached = status.status === 'daily_limit_reached';
+
+    if (isRunning) {
+      if (startAutonomousBtn) startAutonomousBtn.disabled = true;
+      if (startAutonomousBtnLabel) startAutonomousBtnLabel.textContent = `🚀 Running Batch ${status.currentBatch}...`;
+      if (autoStatusText) autoStatusText.textContent = `Batch ${status.currentBatch}: Dispatched ${status.sentInCurrentBatch}/${status.batchSize} verified emails`;
+      if (pauseAutonomousBtn) {
+        pauseAutonomousBtn.classList.remove('hidden');
+        pauseAutonomousBtn.textContent = '⏸️ Pause';
+      }
+      if (skipBreakAutonomousBtn) skipBreakAutonomousBtn.classList.add('hidden');
+      if (stopAutonomousBtn) stopAutonomousBtn.classList.remove('hidden');
+      if (autoClockCard) autoClockCard.classList.add('hidden');
+    } else if (isWaiting) {
+      if (startAutonomousBtn) startAutonomousBtn.disabled = true;
+      if (startAutonomousBtnLabel) startAutonomousBtnLabel.textContent = `☕ Cooldown Active (${status.pauseMinutes}m)`;
+      if (autoStatusText) autoStatusText.textContent = `Batch ${status.currentBatch} Complete (${status.batchSize} sent)! Resting ${status.pauseMinutes}m...`;
+      if (pauseAutonomousBtn) {
+        pauseAutonomousBtn.classList.remove('hidden');
+        pauseAutonomousBtn.textContent = '⏸️ Pause';
+      }
+      if (skipBreakAutonomousBtn) {
+        skipBreakAutonomousBtn.classList.remove('hidden');
+        skipBreakAutonomousBtn.textContent = `⚡ Skip Break & Send ${status.batchSize || 60} Now`;
+      }
+      if (stopAutonomousBtn) stopAutonomousBtn.classList.remove('hidden');
+      if (autoClockCard) autoClockCard.classList.remove('hidden');
+
+      const mins = Math.max(0, Math.floor(status.secondsUntilNext / 60));
+      const secs = Math.max(0, status.secondsUntilNext % 60);
+      if (status.secondsUntilNext <= 0) {
+        if (autoClockTimer) autoClockTimer.textContent = '🚀 Preparing...';
+        if (autoClockSub) {
+          autoClockSub.textContent = `Batch cooldown finished! Autonomously fetching fresh HR leads & validating DNS... Batch ${status.currentBatch + 1 || ''} starting!`;
+        }
+      } else {
+        if (autoClockTimer) autoClockTimer.textContent = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+        if (autoClockSub) {
+          autoClockSub.textContent = `Auto-checking Gmail for bounces via IMAP... Next batch of ${status.batchSize || 60} emails will dispatch automatically.`;
+        }
+      }
+    } else if (isPaused) {
+      if (startAutonomousBtn) startAutonomousBtn.disabled = false;
+      if (startAutonomousBtnLabel) startAutonomousBtnLabel.textContent = 'Start 100% Autonomous Outreach';
+      if (autoStatusText) autoStatusText.textContent = 'Engine Paused';
+      if (pauseAutonomousBtn) pauseAutonomousBtn.classList.add('hidden');
+      if (skipBreakAutonomousBtn) {
+        skipBreakAutonomousBtn.classList.remove('hidden');
+        skipBreakAutonomousBtn.textContent = '▶️ Resume Outreach';
+      }
+      if (stopAutonomousBtn) stopAutonomousBtn.classList.remove('hidden');
+      if (autoClockCard) autoClockCard.classList.add('hidden');
+    } else if (isLimitReached) {
+      const limit = status.dailyLimit || 300;
+      if (startAutonomousBtn) startAutonomousBtn.disabled = true;
+      if (startAutonomousBtnLabel) startAutonomousBtnLabel.textContent = `🛑 Daily Safe Cap Reached (${status.sentToday || 0}/${limit})`;
+      if (autoStatusText) autoStatusText.textContent = `Daily Safe Limit Reached (${status.sentToday || 0}/${limit}) — Gmail Health Protected`;
+      if (pauseAutonomousBtn) pauseAutonomousBtn.classList.add('hidden');
+      if (skipBreakAutonomousBtn) skipBreakAutonomousBtn.classList.add('hidden');
+      if (stopAutonomousBtn) stopAutonomousBtn.classList.add('hidden');
+      if (autoClockCard) autoClockCard.classList.add('hidden');
+    } else {
+      // idle, completed, stopped
+      if (startAutonomousBtn) startAutonomousBtn.disabled = false;
+      if (startAutonomousBtnLabel) startAutonomousBtnLabel.textContent = 'Start 100% Autonomous Outreach';
+      if (autoStatusText) {
+        autoStatusText.textContent = status.status === 'completed'
+          ? 'Directory Outreaches Completed'
+          : (status.status === 'stopped' ? 'Engine Stopped' : 'Ready / Standing By');
+      }
+      if (pauseAutonomousBtn) pauseAutonomousBtn.classList.add('hidden');
+      if (skipBreakAutonomousBtn) skipBreakAutonomousBtn.classList.add('hidden');
+      if (stopAutonomousBtn) stopAutonomousBtn.classList.add('hidden');
+      if (autoClockCard) autoClockCard.classList.add('hidden');
+    }
+
+    // 2. Metrics & Dual Progress Bars
+    const limitIndia = status.dailyLimitIndia || 250;
+    const limitForeign = status.dailyLimitForeign || 150;
+    const limitTotal = status.dailyLimit || (limitIndia + limitForeign);
+
+    const sentIndia = status.sentTodayIndia || 0;
+    const sentForeign = status.sentTodayForeign || 0;
+    const sentTotal = status.sentToday || (sentIndia + sentForeign);
+
+    // India Quota Updates
+    if (autoMetricIndiaSent) autoMetricIndiaSent.textContent = sentIndia;
+    if (autoIndiaSlash) autoIndiaSlash.textContent = `/ ${limitIndia} sent`;
+    if (autoIndiaLimitBadge) autoIndiaLimitBadge.textContent = `Daily Goal: ${limitIndia}`;
+    const pctIndia = Math.min(100, Math.round((sentIndia / limitIndia) * 100));
+    if (autoIndiaPct) autoIndiaPct.textContent = `${pctIndia}%`;
+    if (autoIndiaProgressFill) autoIndiaProgressFill.style.width = `${pctIndia}%`;
+    if (autoIndiaRemaining) autoIndiaRemaining.textContent = `${Math.max(0, limitIndia - sentIndia)} remaining`;
+
+    // Foreign Quota Updates
+    if (autoMetricForeignSent) autoMetricForeignSent.textContent = sentForeign;
+    if (autoForeignSlash) autoForeignSlash.textContent = `/ ${limitForeign} sent`;
+    if (autoForeignLimitBadge) autoForeignLimitBadge.textContent = `Daily Goal: ${limitForeign}`;
+    const pctForeign = Math.min(100, Math.round((sentForeign / limitForeign) * 100));
+    if (autoForeignPct) autoForeignPct.textContent = `${pctForeign}%`;
+    if (autoForeignProgressFill) autoForeignProgressFill.style.width = `${pctForeign}%`;
+    if (autoForeignRemaining) autoForeignRemaining.textContent = `${Math.max(0, limitForeign - sentForeign)} remaining`;
+
+    // Total Daily Quota
+    if (autoMetricSentToday) autoMetricSentToday.textContent = sentTotal;
+    const autoDailyLimitBadge = document.getElementById('autoDailyLimitBadge');
+    if (autoDailyLimitBadge) autoDailyLimitBadge.textContent = `${limitTotal} Max`;
+    const autoDailySlash = document.getElementById('autoDailySlash');
+    if (autoDailySlash) autoDailySlash.textContent = `/ ${limitTotal}`;
+    if (autoDailyProgressFill) {
+      const pct = Math.min(100, Math.round((sentTotal / limitTotal) * 100));
+      autoDailyProgressFill.style.width = `${pct}%`;
+    }
+
+    // Current Batch Progress
+    const curBatchSent = status.sentInCurrentBatch || 0;
+    const batchTarget = status.batchSize || 60;
+    if (autoMetricBatchProgress) autoMetricBatchProgress.textContent = curBatchSent;
+    if (autoMetricBatchLimit) autoMetricBatchLimit.textContent = `Target: ${batchTarget}`;
+    const autoMetricBatchSlash = document.getElementById('autoMetricBatchSlash');
+    if (autoMetricBatchSlash) autoMetricBatchSlash.textContent = `/ ${batchTarget}`;
+    if (autoBatchProgressFill) {
+      const batchPct = Math.min(100, Math.round((curBatchSent / batchTarget) * 100));
+      autoBatchProgressFill.style.width = `${batchPct}%`;
+    }
+    if (autoMetricBatchSub) {
+      autoMetricBatchSub.textContent = `Batch ${status.currentBatch || 0} · ~38 🇮🇳 / ~22 🌍`;
+    }
+    if (autoMetricLifetimeDelivered) autoMetricLifetimeDelivered.textContent = (status.lifetimeSent || 0).toLocaleString();
+    if (autoMetricLifetimeFiltered) autoMetricLifetimeFiltered.textContent = (status.lifetimeFiltered || 0).toLocaleString();
+
+    // Update Multi-Sender Accounts Live Quotas
+    if (status.activeAccounts && Array.isArray(status.activeAccounts)) {
+      window.__activeSenderAccounts = status.activeAccounts.map(a => a.user).filter(Boolean);
+      const quotaIds = ['quotaVal-tiwari', 'quotaVal-creative', 'quotaVal-devil', 'quotaVal-ketan181'];
+      status.activeAccounts.forEach((acc, i) => {
+        if (quotaIds[i]) {
+          const el = document.getElementById(quotaIds[i]);
+          if (el) el.textContent = acc.sentToday || 0;
+        }
+      });
+      const autoSenderCountBadge = document.getElementById('autoSenderCountBadge');
+      if (autoSenderCountBadge) {
+        autoSenderCountBadge.textContent = `${status.activeAccounts.length}/${status.activeAccounts.length} Online`;
+      }
+    }
+
+    // 3. Stream Live Terminal Logs
+    if (status.liveLogs && status.liveLogs.length > 0) {
+      renderLiveTerminalLogs(status.liveLogs);
+    }
+  }
+
+  function renderLiveTerminalLogs(logs) {
+    if (!autoTerminalBody) return;
+    if (logs.length === lastRenderedLiveLogCount) return;
+    lastRenderedLiveLogCount = logs.length;
+
+    const html = logs.map(l => {
+      const timeStr = l.timestamp ? new Date(l.timestamp).toLocaleTimeString() : '';
+      let tagClass = 'terminal-tag-sent';
+      if (l.tag === 'VERIFY') tagClass = 'terminal-tag-verify';
+      else if (l.tag === 'SKIP' || l.tag === 'SUPPRESS') tagClass = 'terminal-tag-skip';
+      else if (l.tag === 'DEFER') tagClass = 'terminal-tag-break';
+      else if (l.tag === 'DRY-RUN') tagClass = 'terminal-tag-verify';
+      else if (l.tag === 'BREAK') tagClass = 'terminal-tag-break';
+      else if (l.tag === 'SYNC') tagClass = 'terminal-tag-sync';
+      else if (l.tag === 'LIMIT' || l.tag === 'FAIL' || l.tag === 'ERROR') tagClass = 'terminal-tag-limit';
+
+      return `<div class="terminal-line"><span class="terminal-time">[${timeStr}]</span> <span class="${tagClass}">[${escapeHtml(l.tag)}]</span> ${escapeHtml(l.message)}</div>`;
+    }).join('');
+
+    autoTerminalBody.innerHTML = html;
+    if (autoTerminalScrollCheck && autoTerminalScrollCheck.checked) {
+      autoTerminalBody.scrollTop = autoTerminalBody.scrollHeight;
+    }
+  }
+
+  // -------------------------------------------------------------
+  // 14. Recruiter Response Radar & Inbox Classifier Controller
+  // -------------------------------------------------------------
+  const navGenuineBadge = document.getElementById('navGenuineBadge');
+  const syncInboxBtn = document.getElementById('syncInboxBtn');
+  const syncInboxBtnText = document.getElementById('syncInboxBtnText');
+  const inboxLastSyncedLabel = document.getElementById('inboxLastSyncedLabel');
+  const statGenuineCount = document.getElementById('statGenuineCount');
+  const statAutomatedCount = document.getElementById('statAutomatedCount');
+  const statBouncesFiltered = document.getElementById('statBouncesFiltered');
+  const cardFilterGenuine = document.getElementById('cardFilterGenuine');
+  const cardFilterAutomated = document.getElementById('cardFilterAutomated');
+  const tabNavGenuine = document.getElementById('tabNavGenuine');
+  const tabNavAutomated = document.getElementById('tabNavAutomated');
+  const countBadgeGenuine = document.getElementById('countBadgeGenuine');
+  const countBadgeAutomated = document.getElementById('countBadgeAutomated');
+  const inboxSearchInput = document.getElementById('inboxSearchInput');
+  const genuineResponsesList = document.getElementById('genuineResponsesList');
+  const automatedResponsesList = document.getElementById('automatedResponsesList');
+  const autoAlertTitle = document.getElementById('autoAlertTitle');
+  const autoAlertSub = document.getElementById('autoAlertSub');
+
+  // Detail Modal Elements
+  const inboxDetailModal = document.getElementById('inboxDetailModal');
+  const closeInboxModalBtn = document.getElementById('closeInboxModalBtn');
+  const modalTagPill = document.getElementById('modalTagPill');
+  const modalPriorityPill = document.getElementById('modalPriorityPill');
+  const modalSubject = document.getElementById('modalSubject');
+  const modalCompany = document.getElementById('modalCompany');
+  const modalSender = document.getElementById('modalSender');
+  const modalDate = document.getElementById('modalDate');
+  const modalMessageContent = document.getElementById('modalMessageContent');
+  const modalCopyEmailBtn = document.getElementById('modalCopyEmailBtn');
+  const modalOpenGmailBtn = document.getElementById('modalOpenGmailBtn');
+
+  let currentInboxResponses = { genuine: [], automated: [] };
+  let currentActiveInboxTab = 'genuine';
+  let currentActiveAccountFilter = 'all';
+  let activeModalEmail = '';
+  let activeExpandedCardId = null;
+
+  // Side-by-Side 3-Column Elements
+  const tabModeSideBySide = document.getElementById('tabModeSideBySide');
+  const sideBySideColumnsContainer = document.getElementById('sideBySideColumnsContainer');
+  const singleListViewContainer = document.getElementById('singleListViewContainer');
+
+  const colAccount1 = document.getElementById('colAccount1');
+  const colAccount2 = document.getElementById('colAccount2');
+  const colAccount3 = document.getElementById('colAccount3');
+  const colAccount4 = document.getElementById('colAccount4');
+
+  const colCards1 = document.getElementById('colCards1');
+  const colCards2 = document.getElementById('colCards2');
+  const colCards3 = document.getElementById('colCards3');
+  const colCards4 = document.getElementById('colCards4');
+
+  const colGenCount1 = document.getElementById('colGenCount1');
+  const colAutoCount1 = document.getElementById('colAutoCount1');
+  const colGenCount2 = document.getElementById('colGenCount2');
+  const colAutoCount2 = document.getElementById('colAutoCount2');
+  const colGenCount3 = document.getElementById('colGenCount3');
+  const colAutoCount3 = document.getElementById('colAutoCount3');
+  const colGenCount4 = document.getElementById('colGenCount4');
+  const colAutoCount4 = document.getElementById('colAutoCount4');
+
+  // Response Pagination & Column Stepper State
+  let colPages = [1, 1, 1, 1];
+  const COL_PAGE_SIZE = 5;
+  let currentOpenItem = null;
+  let currentInboxPage = 1;
+  let inboxPageSize = 10;
+
+  // DOM Elements for Live Reader Pane
+  const inboxActiveReaderPane = document.getElementById('inboxActiveReaderPane');
+  const readerAccountBadge = document.getElementById('readerAccountBadge');
+  const readerCategoryPill = document.getElementById('readerCategoryPill');
+  const readerPriorityPill = document.getElementById('readerPriorityPill');
+  const readerDate = document.getElementById('readerDate');
+  const readerCompany = document.getElementById('readerCompany');
+  const readerSender = document.getElementById('readerSender');
+  const readerSubject = document.getElementById('readerSubject');
+  const readerBodyText = document.getElementById('readerBodyText');
+  const readerReplyGmailBtn = document.getElementById('readerReplyGmailBtn');
+  const readerCopyEmailBtn = document.getElementById('readerCopyEmailBtn');
+  const readerCopySubjectBtn = document.getElementById('readerCopySubjectBtn');
+  const closeReaderPaneBtn = document.getElementById('closeReaderPaneBtn');
+
+  // 5-Minute Auto-Sync State
+  let isAutoSyncActive = true;
+  let autoSyncRemainingSeconds = 300; // 5 minutes (300 seconds)
+  let isSyncingInProgress = false;
+
+  // DOM Elements for Pagination & Auto-Sync
+  const autoSyncStatusBox = document.getElementById('autoSyncStatusBox');
+  const autoSyncDot = document.getElementById('autoSyncDot');
+  const autoSyncStateText = document.getElementById('autoSyncStateText');
+  const autoSyncCountdownLabel = document.getElementById('autoSyncCountdownLabel');
+  const toggleAutoSyncBtn = document.getElementById('toggleAutoSyncBtn');
+  const toggleAutoSyncBtnText = document.getElementById('toggleAutoSyncBtnText');
+
+  const pageRangeStart = document.getElementById('pageRangeStart');
+  const pageRangeEnd = document.getElementById('pageRangeEnd');
+  const pageTotalCount = document.getElementById('pageTotalCount');
+  const prevPageBtn = document.getElementById('prevPageBtn');
+  const nextPageBtn = document.getElementById('nextPageBtn');
+  const pagePillsTop = document.getElementById('pagePillsTop');
+  const pageSizeSelect = document.getElementById('pageSizeSelect');
+
+  const footerCurrentPage = document.getElementById('footerCurrentPage');
+  const footerTotalPages = document.getElementById('footerTotalPages');
+  const footerPrevPageBtn = document.getElementById('footerPrevPageBtn');
+  const footerNextPageBtn = document.getElementById('footerNextPageBtn');
+  const pagePillsBottom = document.getElementById('pagePillsBottom');
+
+  function getAccountBadgeHtml(account) {
+    const acc = (account || '').toLowerCase();
+    let cls = 'acc-tiwari';
+    let label = (account || '').split('@')[0] || 'Sender 1';
+    if (acc.includes('2') || acc.includes('creative')) {
+      cls = 'acc-creative';
+    } else if (acc.includes('3') || acc.includes('devil')) {
+      cls = 'acc-devil';
+    } else if (acc.includes('4') || acc.includes('181')) {
+      cls = 'acc-ketan181';
+    }
+    return `<span class="badge-account-pill ${cls}">📬 ${escapeHtml(label)}</span>`;
+  }
+
+  function formatSyncTime(sec) {
+    const m = Math.floor(sec / 60);
+    const s = sec % 60;
+    return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+  }
+
+  function updateAutoSyncUI() {
+    if (autoSyncCountdownLabel) {
+      autoSyncCountdownLabel.innerHTML = `Next sync in: <strong>${formatSyncTime(autoSyncRemainingSeconds)}</strong>`;
+    }
+    if (autoSyncDot) {
+      if (!isAutoSyncActive) {
+        autoSyncDot.className = 'auto-sync-indicator dot-paused';
+      } else if (isSyncingInProgress) {
+        autoSyncDot.className = 'auto-sync-indicator dot-syncing';
+      } else {
+        autoSyncDot.className = 'auto-sync-indicator dot-active';
+      }
+    }
+    if (autoSyncStateText) {
+      if (!isAutoSyncActive) {
+        autoSyncStateText.textContent = 'PAUSED';
+        autoSyncStateText.className = 'auto-sync-status-text paused';
+      } else if (isSyncingInProgress) {
+        autoSyncStateText.textContent = 'SYNCING...';
+        autoSyncStateText.className = 'auto-sync-status-text';
+      } else {
+        autoSyncStateText.textContent = 'ACTIVE';
+        autoSyncStateText.className = 'auto-sync-status-text';
+      }
+    }
+    if (toggleAutoSyncBtnText) {
+      toggleAutoSyncBtnText.textContent = isAutoSyncActive ? '⏸️ Pause Auto-Sync' : '▶ Resume Auto-Sync';
+    }
+  }
+
+  async function triggerInboxSync(isAuto = false) {
+    if (isSyncingInProgress) return;
+    isSyncingInProgress = true;
+    updateAutoSyncUI();
+
+    if (syncInboxBtn) syncInboxBtn.disabled = true;
+    if (syncInboxBtnText) syncInboxBtnText.textContent = '⏳ Scanning All 3 Inboxes...';
+
+    try {
+      const res = await fetch(`${API_BASE}/api/inbox/sync`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ maxMessages: 150 })
+      });
+      const json = await res.json();
+      if (json.success && json.data) {
+        currentInboxResponses = json.data;
+        renderInboxView(json.data);
+        autoSyncRemainingSeconds = 300; // Reset 5-minute countdown
+        if (!isAuto) {
+          showToast(json.message, 'success');
+        } else {
+          console.log('[AUTO-SYNC 5-MIN]', json.message);
+        }
+      } else {
+        if (!isAuto) showToast(json.error || 'Failed to sync inboxes.', 'danger');
+      }
+    } catch (err) {
+      console.warn('Error syncing inboxes:', err.message);
+      if (!isAuto) showToast('Error syncing inboxes: ' + err.message, 'danger');
+    } finally {
+      isSyncingInProgress = false;
+      if (syncInboxBtn) syncInboxBtn.disabled = false;
+      if (syncInboxBtnText) syncInboxBtnText.textContent = '🔄 Sync All 3 Now';
+      updateAutoSyncUI();
+    }
+  }
+
+  // Auto-Sync 1-Second Countdown Ticker
+  setInterval(() => {
+    if (isAutoSyncActive && !isSyncingInProgress) {
+      autoSyncRemainingSeconds--;
+      if (autoSyncRemainingSeconds <= 0) {
+        triggerInboxSync(true);
+      } else {
+        updateAutoSyncUI();
+      }
+    }
+  }, 1000);
+
+  if (toggleAutoSyncBtn) {
+    toggleAutoSyncBtn.addEventListener('click', () => {
+      isAutoSyncActive = !isAutoSyncActive;
+      if (isAutoSyncActive && autoSyncRemainingSeconds <= 0) {
+        autoSyncRemainingSeconds = 300;
+      }
+      updateAutoSyncUI();
+      showToast(`5-Minute Auto-Sync is now ${isAutoSyncActive ? 'ACTIVE (scans every 5 mins)' : 'PAUSED'}`, 'info');
+    });
+  }
+
+  if (syncInboxBtn) {
+    syncInboxBtn.addEventListener('click', () => {
+      triggerInboxSync(false);
+    });
+  }
+
+  async function loadInboxResponses() {
+    try {
+      const res = await fetch(`${API_BASE}/api/inbox/responses`);
+      const data = await res.json();
+      currentInboxResponses = data;
+      renderInboxView(data);
+    } catch (e) {
+      console.warn('Failed to load inbox responses:', e.message);
+    }
+  }
+
+  function renderInboxView(data) {
+    if (!data || !data.stats) return;
+
+    // Update Counter Badges on Account Switcher Pills
+    const pillCountAll = document.getElementById('pillCountAll');
+    const pillCountAcc1 = document.getElementById('pillCountAcc1');
+    const pillCountAcc2 = document.getElementById('pillCountAcc2');
+    const pillCountAcc3 = document.getElementById('pillCountAcc3');
+    const pillCountAcc4 = document.getElementById('pillCountAcc4');
+
+    const accStats = (data.stats && data.stats.accounts) ? data.stats.accounts : {};
+    const accKeys = Object.keys(accStats);
+    const count1 = accKeys[0] && accStats[accKeys[0]] ? accStats[accKeys[0]].totalCount : 0;
+    const count2 = accKeys[1] && accStats[accKeys[1]] ? accStats[accKeys[1]].totalCount : 0;
+    const count3 = accKeys[2] && accStats[accKeys[2]] ? accStats[accKeys[2]].totalCount : 0;
+    const count4 = accKeys[3] && accStats[accKeys[3]] ? accStats[accKeys[3]].totalCount : 0;
+    const totalAll = (data.genuine ? data.genuine.length : 0) + (data.automated ? data.automated.length : 0);
+
+    if (pillCountAll) pillCountAll.textContent = totalAll;
+    if (pillCountAcc1) pillCountAcc1.textContent = count1;
+    if (pillCountAcc2) pillCountAcc2.textContent = count2;
+    if (pillCountAcc3) pillCountAcc3.textContent = count3;
+    if (pillCountAcc4) pillCountAcc4.textContent = count4;
+
+    // Filter displayed lists based on selected sender account
+    let dispGenuine = data.genuine || [];
+    let dispAutomated = data.automated || [];
+    if (currentActiveAccountFilter !== 'all') {
+      dispGenuine = dispGenuine.filter(x => (x.recipientAccount || '').toLowerCase() === currentActiveAccountFilter.toLowerCase());
+      dispAutomated = dispAutomated.filter(x => (x.recipientAccount || '').toLowerCase() === currentActiveAccountFilter.toLowerCase());
+    }
+
+    const gCount = dispGenuine.length;
+    const aCount = dispAutomated.length;
+    const bCount = data.stats.bouncesCount || 0;
+
+    // Update Counts & Badges
+    if (statGenuineCount) statGenuineCount.textContent = gCount;
+    if (statAutomatedCount) statAutomatedCount.textContent = aCount;
+    if (statBouncesFiltered) statBouncesFiltered.textContent = bCount;
+    if (countBadgeGenuine) countBadgeGenuine.textContent = gCount;
+    if (countBadgeAutomated) countBadgeAutomated.textContent = aCount;
+
+    if (navGenuineBadge) {
+      const totalGenAll = data.stats.genuineCount || 0;
+      navGenuineBadge.textContent = totalGenAll > 0 ? `🎯 ${totalGenAll} Leads` : '📬 Inbox';
+      navGenuineBadge.className = totalGenAll > 0 ? 'mode-tab-pill tab-pill-highlight' : 'mode-tab-pill';
+    }
+
+    if (autoAlertTitle) {
+      const totalGenAll = data.stats.genuineCount || 0;
+      autoAlertTitle.textContent = totalGenAll > 0 ? `🎯 ${totalGenAll} Genuine Recruiter Responses Detected!` : 'Inbox Clean & Monitored';
+    }
+    if (autoAlertSub) {
+      if (data.genuine && data.genuine.length > 0) {
+        const topCompanies = Array.from(new Set(data.genuine.map(g => g.company).filter(Boolean))).slice(0, 4);
+        autoAlertSub.textContent = `Active replies received from ${topCompanies.join(', ')} & more across 4 inboxes.`;
+      } else {
+        autoAlertSub.textContent = 'All delivery failures and newsletter noise are automatically filtered.';
+      }
+    }
+
+    if (inboxLastSyncedLabel) {
+      if (data.lastSyncedAt) {
+        inboxLastSyncedLabel.textContent = `Last Synced: ${new Date(data.lastSyncedAt).toLocaleTimeString()}`;
+      } else {
+        inboxLastSyncedLabel.textContent = 'Last Synced: Not yet synced';
+      }
+    }
+
+    renderResponseCards();
+  }
+
+  function renderResponseCards() {
+    const query = (inboxSearchInput ? inboxSearchInput.value : '').toLowerCase().trim();
+
+    // SIDE-BY-SIDE 4-COLUMN MODE (ACTIVE IN ALL MODES: ALL, GENUINE ONLY, AUTO-REPLIES ONLY)
+    if (sideBySideColumnsContainer) sideBySideColumnsContainer.classList.remove('hidden');
+    if (singleListViewContainer) singleListViewContainer.classList.add('hidden');
+
+    if (currentActiveInboxTab === 'side_by_side') {
+      if (tabModeSideBySide) tabModeSideBySide.classList.add('active');
+      if (tabNavGenuine) tabNavGenuine.classList.remove('active');
+      if (tabNavAutomated) tabNavAutomated.classList.remove('active');
+      if (cardFilterGenuine) cardFilterGenuine.classList.remove('active-metric');
+      if (cardFilterAutomated) cardFilterAutomated.classList.remove('active-metric');
+    } else if (currentActiveInboxTab === 'genuine') {
+      if (tabModeSideBySide) tabModeSideBySide.classList.remove('active');
+      if (tabNavGenuine) tabNavGenuine.classList.add('active');
+      if (tabNavAutomated) tabNavAutomated.classList.remove('active');
+      if (cardFilterGenuine) cardFilterGenuine.classList.add('active-metric');
+      if (cardFilterAutomated) cardFilterAutomated.classList.remove('active-metric');
+    } else if (currentActiveInboxTab === 'automated') {
+      if (tabModeSideBySide) tabModeSideBySide.classList.remove('active');
+      if (tabNavAutomated) tabNavAutomated.classList.add('active');
+      if (tabNavGenuine) tabNavGenuine.classList.remove('active');
+      if (cardFilterAutomated) cardFilterAutomated.classList.add('active-metric');
+      if (cardFilterGenuine) cardFilterGenuine.classList.remove('active-metric');
+    }
+
+    const activeAccountsList = (window.__activeSenderAccounts && window.__activeSenderAccounts.length > 0)
+      ? window.__activeSenderAccounts
+      : Object.keys((data.stats && data.stats.accounts) || {});
+
+    const accounts = [
+      {
+        email: activeAccountsList[0] || 'account1',
+        name: (activeAccountsList[0] || 'Sender 1').split('@')[0],
+        colEl: colAccount1,
+        cardsEl: colCards1,
+        genCountEl: colGenCount1,
+        autoCountEl: colAutoCount1,
+        stepperInfoEl: document.getElementById('colStepperInfo1'),
+        prevBtnEl: document.getElementById('colPrevBtn1'),
+        nextBtnEl: document.getElementById('colNextBtn1')
+      },
+      {
+        email: activeAccountsList[1] || 'account2',
+        name: (activeAccountsList[1] || 'Sender 2').split('@')[0],
+        colEl: colAccount2,
+        cardsEl: colCards2,
+        genCountEl: colGenCount2,
+        autoCountEl: colAutoCount2,
+        stepperInfoEl: document.getElementById('colStepperInfo2'),
+        prevBtnEl: document.getElementById('colPrevBtn2'),
+        nextBtnEl: document.getElementById('colNextBtn2')
+      },
+      {
+        email: activeAccountsList[2] || 'account3',
+        name: (activeAccountsList[2] || 'Sender 3').split('@')[0],
+        colEl: colAccount3,
+        cardsEl: colCards3,
+        genCountEl: colGenCount3,
+        autoCountEl: colAutoCount3,
+        stepperInfoEl: document.getElementById('colStepperInfo3'),
+        prevBtnEl: document.getElementById('colPrevBtn3'),
+        nextBtnEl: document.getElementById('colNextBtn3')
+      },
+      {
+        email: activeAccountsList[3] || 'account4',
+        name: (activeAccountsList[3] || 'Sender 4').split('@')[0],
+        colEl: colAccount4,
+        cardsEl: colCards4,
+        genCountEl: colGenCount4,
+        autoCountEl: colAutoCount4,
+        stepperInfoEl: document.getElementById('colStepperInfo4'),
+        prevBtnEl: document.getElementById('colPrevBtn4'),
+        nextBtnEl: document.getElementById('colNextBtn4')
+      }
+    ];
+
+    accounts.forEach((acc, accIdx) => {
+      // Raw items for this specific account
+      const accGen = (currentInboxResponses.genuine || []).filter(item => 
+        (item.recipientAccount || '').toLowerCase().includes(acc.name.toLowerCase()) ||
+        (item.recipientAccount || '').toLowerCase() === (acc.email || '').toLowerCase()
+      );
+      const accAuto = (currentInboxResponses.automated || []).filter(item => 
+        (item.recipientAccount || '').toLowerCase().includes(acc.name.toLowerCase()) ||
+        (item.recipientAccount || '').toLowerCase() === (acc.email || '').toLowerCase()
+      );
+
+      // Update column header count badges
+      if (acc.genCountEl) acc.genCountEl.textContent = accGen.length;
+      if (acc.autoCountEl) acc.autoCountEl.textContent = accAuto.length;
+
+      // Visibility according to account pill filter
+      const isSelected = (currentActiveAccountFilter === 'all') || 
+        acc.email.toLowerCase() === currentActiveAccountFilter.toLowerCase();
+      if (acc.colEl) {
+        acc.colEl.style.display = isSelected ? '' : 'none';
+      }
+
+      // Filter items by search query if any
+      const filteredAccGen = accGen.filter(item => {
+        if (!query) return true;
+        const text = `${item.company} ${item.senderName} ${item.senderEmail} ${item.subject} ${item.bodySnippet}`.toLowerCase();
+        return text.includes(query);
+      });
+
+      const filteredAccAuto = accAuto.filter(item => {
+        if (!query) return true;
+        const text = `${item.company} ${item.senderName} ${item.senderEmail} ${item.subject} ${item.bodySnippet}`.toLowerCase();
+        return text.includes(query);
+      });
+
+      // Filter by category: genuine, automated, or both
+      let allAccItems = [];
+      if (currentActiveInboxTab === 'genuine') {
+        allAccItems = filteredAccGen.map(x => ({ ...x, isGenuine: true }));
+      } else if (currentActiveInboxTab === 'automated') {
+        allAccItems = filteredAccAuto.map(x => ({ ...x, isGenuine: false }));
+      } else {
+        allAccItems = [
+          ...filteredAccGen.map(x => ({ ...x, isGenuine: true })),
+          ...filteredAccAuto.map(x => ({ ...x, isGenuine: false }))
+        ];
+      }
+
+      const totalItems = allAccItems.length;
+      const totalPages = Math.max(1, Math.ceil(totalItems / COL_PAGE_SIZE));
+      if (colPages[accIdx] > totalPages) colPages[accIdx] = totalPages;
+      if (colPages[accIdx] < 1) colPages[accIdx] = 1;
+
+      const startIdx = totalItems === 0 ? 0 : (colPages[accIdx] - 1) * COL_PAGE_SIZE;
+      const endIdx = Math.min(startIdx + COL_PAGE_SIZE, totalItems);
+
+      if (acc.stepperInfoEl) {
+        acc.stepperInfoEl.textContent = totalItems === 0 ? '0 of 0' : `${startIdx + 1}–${endIdx} of ${totalItems}`;
+      }
+      if (acc.prevBtnEl) acc.prevBtnEl.disabled = colPages[accIdx] <= 1;
+      if (acc.nextBtnEl) acc.nextBtnEl.disabled = colPages[accIdx] >= totalPages;
+
+      const pageSlice = allAccItems.slice(startIdx, endIdx);
+
+      if (acc.cardsEl) {
+        if (allAccItems.length === 0) {
+          const isGenTab = currentActiveInboxTab === 'genuine';
+          const autoCountForAcc = accAuto.length;
+          let emptyHelpText = '';
+          if (isGenTab && autoCountForAcc > 0) {
+            emptyHelpText = `0 direct interview inquiries yet, but <strong>${autoCountForAcc} Automated Auto-Replies</strong> received.<br><button type="button" class="btn-micro btn-subtle btn-switch-to-auto" style="margin-top: 8px; cursor: pointer;">🤖 View ${autoCountForAcc} Auto-Replies</button>`;
+          } else {
+            emptyHelpText = query ? 'No replies match your search filter.' : 'When emails arrive for ' + escapeHtml(acc.email) + ', they appear here.';
+          }
+          acc.cardsEl.innerHTML = `
+            <div class="inbox-column-empty">
+              <div style="font-size: 26px; margin-bottom: 6px;">📬</div>
+              <strong style="color: #cbd5e1; font-size: 13px;">${emptyLabel}</strong>
+              <div style="margin-top: 6px; color: #64748b; font-size: 11.5px; line-height: 1.4;">
+                ${emptyHelpText}
+              </div>
+            </div>
+          `;
+          const btnSwitch = acc.cardsEl.querySelector('.btn-switch-to-auto');
+          if (btnSwitch) {
+            btnSwitch.addEventListener('click', () => switchInboxTab('automated'));
+          }
+        } else {
+          acc.cardsEl.innerHTML = pageSlice.map(item => {
+            const isGen = item.isGenuine;
+            const isExpanded = activeExpandedCardId && activeExpandedCardId === item.id;
+            let tagClass = isGen ? (item.tagType === 'warning' ? 'warning' : 'success') : 'info';
+            let cardCls = isGen ? 'genuine-card' : 'automated-card';
+            let badgeHtml = isGen 
+              ? `<span class="badge-tag-pill success">🎯 Genuine HR</span>`
+              : `<span class="badge-tag-pill info">🤖 Auto-Reply</span>`;
+
+            if (isExpanded) {
+              return `
+                <div class="response-card ${cardCls} expanded-response-card selected-active-card" data-id="${escapeHtml(item.id)}" title="Click to collapse">
+                  <div class="response-card-top">
+                    <div class="response-card-badges">
+                      ${badgeHtml}
+                      <span class="badge-tag-pill ${tagClass}">${escapeHtml(item.tag || 'Reply')}</span>
+                      ${(item.actionPriority && item.actionPriority.includes('HIGH')) ? '<span class="badge-priority-pill">HIGH</span>' : ''}
+                      <span class="badge-expanded-reading">📖 READING NOW</span>
+                    </div>
+                    <div class="response-card-date">${escapeHtml(item.dateFormatted || item.date)}</div>
+                  </div>
+                  <div class="response-card-company-row" style="margin-top: 6px;">
+                    <span class="response-card-company" style="font-size: 14px;">${escapeHtml(item.company || 'Company')}</span>
+                    <span class="response-card-sender">• ${escapeHtml(item.senderName)} &lt;${escapeHtml(item.senderEmail)}&gt;</span>
+                  </div>
+                  <div class="response-card-subject expanded-subject">
+                    <strong>Subject:</strong> ${escapeHtml(item.subject)}
+                  </div>
+                  <div class="response-card-full-body">
+                    ${escapeHtml(item.bodySnippet || 'No email content available.')}
+                  </div>
+                  <div class="response-card-expanded-actions">
+                    <a href="${escapeHtml(item.gmailSearchUrl)}" target="_blank" class="btn-tiny btn-accent btn-open-gmail" onclick="event.stopPropagation()">📨 Reply in Gmail ↗</a>
+                    <button type="button" class="btn-tiny btn-subtle btn-copy-recruiter" data-email="${escapeHtml(item.senderEmail)}" onclick="event.stopPropagation()">📋 Copy Email</button>
+                    <button type="button" class="btn-tiny btn-subtle btn-copy-subj" data-subj="${escapeHtml(item.subject)}" onclick="event.stopPropagation()">📋 Copy Subject</button>
+                    <button type="button" class="btn-tiny btn-secondary btn-collapse-card" onclick="event.stopPropagation()">▲ Collapse</button>
+                  </div>
+                </div>
+              `;
+            }
+
+            return `
+              <div class="response-card ${cardCls}" data-id="${escapeHtml(item.id)}" title="Click to open & read email right here">
+                <div class="response-card-top">
+                  <div class="response-card-badges">
+                    ${badgeHtml}
+                    <span class="badge-tag-pill ${tagClass}">${escapeHtml(item.tag || 'Reply')}</span>
+                    ${(item.actionPriority && item.actionPriority.includes('HIGH')) ? '<span class="badge-priority-pill">HIGH</span>' : ''}
+                  </div>
+                  <div class="response-card-date">${escapeHtml(item.dateFormatted || item.date)}</div>
+                </div>
+                <div class="response-card-company-row">
+                  <span class="response-card-company">${escapeHtml(item.company || 'Company')}</span>
+                  <span class="response-card-sender">• ${escapeHtml(item.senderName)}</span>
+                </div>
+                <div class="response-card-subject">${escapeHtml(item.subject)}</div>
+                <div class="response-card-snippet">${escapeHtml(item.bodySnippet)}</div>
+                <div class="response-card-actions">
+                  <button type="button" class="btn-tiny btn-subtle btn-view-full" data-id="${escapeHtml(item.id)}" data-cat="${isGen ? 'genuine' : 'automated'}">👀 Read Email ▾</button>
+                  <a href="${escapeHtml(item.gmailSearchUrl)}" target="_blank" class="btn-open-gmail" onclick="event.stopPropagation()">📨 Reply in Gmail ↗</a>
+                </div>
+              </div>
+            `;
+          }).join('');
+        }
+      }
+    });
+
+    if (sideBySideColumnsContainer) {
+      if (currentActiveAccountFilter === 'all') {
+        sideBySideColumnsContainer.style.gridTemplateColumns = 'repeat(3, minmax(0, 1fr))';
+      } else {
+        sideBySideColumnsContainer.style.gridTemplateColumns = '1fr';
+      }
+    }
+
+    return; // Completed side-by-side render
+
+    // 2. SINGLE LIST VIEW (PAGINATED - FOR GENUINE ONLY / AUTOMATED ONLY)
+    if (sideBySideColumnsContainer) sideBySideColumnsContainer.classList.add('hidden');
+    if (singleListViewContainer) singleListViewContainer.classList.remove('hidden');
+
+    // 1. Filter genuine items
+    const filteredGenuine = (currentInboxResponses.genuine || []).filter(item => {
+      const matchesAccount = currentActiveAccountFilter === 'all' || 
+        (item.recipientAccount || '').toLowerCase() === currentActiveAccountFilter.toLowerCase();
+      if (!matchesAccount) return false;
+      if (!query) return true;
+      const text = `${item.company} ${item.senderName} ${item.senderEmail} ${item.subject} ${item.bodySnippet}`.toLowerCase();
+      return text.includes(query);
+    });
+
+    // 2. Filter automated items
+    const filteredAutomated = (currentInboxResponses.automated || []).filter(item => {
+      const matchesAccount = currentActiveAccountFilter === 'all' || 
+        (item.recipientAccount || '').toLowerCase() === currentActiveAccountFilter.toLowerCase();
+      if (!matchesAccount) return false;
+      if (!query) return true;
+      const text = `${item.company} ${item.senderName} ${item.senderEmail} ${item.subject} ${item.bodySnippet}`.toLowerCase();
+      return text.includes(query);
+    });
+
+    // Determine active list for pagination
+    const activeList = (currentActiveInboxTab === 'genuine') ? filteredGenuine : filteredAutomated;
+    const totalItems = activeList.length;
+    const pSize = (inboxPageSize === 'all') ? totalItems : (parseInt(inboxPageSize, 10) || 10);
+    const totalPages = (inboxPageSize === 'all' || totalItems === 0) ? 1 : Math.max(1, Math.ceil(totalItems / pSize));
+
+    // Clamp current page
+    if (currentInboxPage > totalPages) currentInboxPage = totalPages;
+    if (currentInboxPage < 1) currentInboxPage = 1;
+
+    const startIndex = (inboxPageSize === 'all') ? 0 : (currentInboxPage - 1) * pSize;
+    const endIndex = (inboxPageSize === 'all') ? totalItems : Math.min(startIndex + pSize, totalItems);
+
+    // Update Pagination Header & Footer Labels
+    if (pageRangeStart) pageRangeStart.textContent = totalItems === 0 ? '0' : (startIndex + 1);
+    if (pageRangeEnd) pageRangeEnd.textContent = endIndex;
+    if (pageTotalCount) pageTotalCount.textContent = totalItems;
+    if (prevPageBtn) prevPageBtn.disabled = currentInboxPage <= 1;
+    if (nextPageBtn) nextPageBtn.disabled = currentInboxPage >= totalPages;
+
+    if (footerCurrentPage) footerCurrentPage.textContent = currentInboxPage;
+    if (footerTotalPages) footerTotalPages.textContent = totalPages;
+    if (footerPrevPageBtn) footerPrevPageBtn.disabled = currentInboxPage <= 1;
+    if (footerNextPageBtn) footerNextPageBtn.disabled = currentInboxPage >= totalPages;
+
+    // Render Page Pill Buttons (e.g. 1, 2, 3...)
+    function renderPills(container) {
+      if (!container) return;
+      container.innerHTML = '';
+      if (totalPages <= 1) return;
+
+      let startP = Math.max(1, currentInboxPage - 2);
+      let endP = Math.min(totalPages, startP + 4);
+      if (endP - startP < 4) startP = Math.max(1, endP - 4);
+
+      for (let p = startP; p <= endP; p++) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = `page-pill ${p === currentInboxPage ? 'active' : ''}`;
+        btn.textContent = p;
+        btn.addEventListener('click', () => {
+          currentInboxPage = p;
+          renderResponseCards();
+        });
+        container.appendChild(btn);
+      }
+    }
+    renderPills(pagePillsTop);
+    renderPills(pagePillsBottom);
+
+    // Slice items for active page
+    const pagedGenuine = (inboxPageSize === 'all') ? filteredGenuine : 
+      (currentActiveInboxTab === 'genuine' ? filteredGenuine.slice(startIndex, endIndex) : filteredGenuine.slice(0, pSize));
+    const pagedAutomated = (inboxPageSize === 'all') ? filteredAutomated : 
+      (currentActiveInboxTab === 'automated' ? filteredAutomated.slice(startIndex, endIndex) : filteredAutomated.slice(0, pSize));
+
+    // Render Genuine List
+    if (genuineResponsesList) {
+      if (filteredGenuine.length === 0) {
+        if (filteredAutomated.length > 0) {
+          genuineResponsesList.innerHTML = `
+            <div class="inbox-empty-state">
+              <p>🎯 0 Genuine interview requests yet for <strong>${escapeHtml(currentActiveAccountFilter === 'all' ? 'this filter' : currentActiveAccountFilter)}</strong>, but <strong>${filteredAutomated.length} Automated Replies / System Acks</strong> have arrived!</p>
+              <button type="button" class="btn-tiny btn-accent" id="btnSwitchToAutoReplies" style="margin-top: 10px; cursor: pointer;">🤖 View ${filteredAutomated.length} Automated Replies ➔</button>
+            </div>
+          `;
+          const btn = document.getElementById('btnSwitchToAutoReplies');
+          if (btn) btn.addEventListener('click', () => switchInboxTab('automated'));
+        } else {
+          genuineResponsesList.innerHTML = `
+            <div class="inbox-empty-state">
+              <p>🎯 No genuine recruiter responses matched your current filter.</p>
+            </div>
+          `;
+        }
+      } else {
+        genuineResponsesList.innerHTML = pagedGenuine.map(item => {
+          let tagClass = 'accent';
+          if (item.tagType === 'success') tagClass = 'success';
+          if (item.tagType === 'warning') tagClass = 'warning';
+          if (item.tagType === 'info') tagClass = 'info';
+
+          return `
+            <div class="response-card genuine-card" data-id="${escapeHtml(item.id)}">
+              <div class="response-card-top">
+                <div class="response-card-badges">
+                  ${getAccountBadgeHtml(item.recipientAccount)}
+                  <span class="badge-tag-pill ${tagClass}">${escapeHtml(item.tag)}</span>
+                  ${item.actionPriority && item.actionPriority.includes('HIGH') ? '<span class="badge-priority-pill">HIGH PRIORITY</span>' : ''}
+                </div>
+                <div class="response-card-date">${escapeHtml(item.dateFormatted || item.date)}</div>
+              </div>
+              <div class="response-card-company-row">
+                <span class="response-card-company">${escapeHtml(item.company || 'Hiring Team')}</span>
+                <span class="response-card-sender">• ${escapeHtml(item.senderName)} &lt;${escapeHtml(item.senderEmail)}&gt;</span>
+              </div>
+              <div class="response-card-subject">${escapeHtml(item.subject)}</div>
+              <div class="response-card-snippet">${escapeHtml(item.bodySnippet)}</div>
+              <div class="response-card-actions">
+                <button type="button" class="btn-tiny btn-subtle btn-view-full" data-id="${escapeHtml(item.id)}" data-cat="genuine">👀 Read Full Message</button>
+                <a href="${escapeHtml(item.gmailSearchUrl)}" target="_blank" class="btn-open-gmail">📨 Reply in Gmail ↗</a>
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
+    }
+
+    // Render Automated List
+    if (automatedResponsesList) {
+      if (filteredAutomated.length === 0) {
+        automatedResponsesList.innerHTML = `
+          <div class="inbox-empty-state">
+            <p>🤖 No automated responses matched your current filter.</p>
+          </div>
+        `;
+      } else {
+        automatedResponsesList.innerHTML = pagedAutomated.map(item => {
+          let tagClass = 'info';
+          if (item.tagType === 'warning') tagClass = 'warning';
+
+          return `
+            <div class="response-card automated-card" data-id="${escapeHtml(item.id)}">
+              <div class="response-card-top">
+                <div class="response-card-badges">
+                  ${getAccountBadgeHtml(item.recipientAccount)}
+                  <span class="badge-tag-pill ${tagClass}">${escapeHtml(item.tag)}</span>
+                </div>
+                <div class="response-card-date">${escapeHtml(item.dateFormatted || item.date)}</div>
+              </div>
+              <div class="response-card-company-row">
+                <span class="response-card-company">${escapeHtml(item.company || 'Company')}</span>
+                <span class="response-card-sender">• ${escapeHtml(item.senderName)}</span>
+              </div>
+              <div class="response-card-subject">${escapeHtml(item.subject)}</div>
+              <div class="response-card-snippet">${escapeHtml(item.bodySnippet)}</div>
+              <div class="response-card-actions">
+                <button type="button" class="btn-tiny btn-subtle btn-view-full" data-id="${escapeHtml(item.id)}" data-cat="automated">👀 View Content</button>
+                <a href="${escapeHtml(item.gmailSearchUrl)}" target="_blank" class="btn-open-gmail">📨 View in Gmail ↗</a>
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
+    }
+  }
+
+  // Pagination navigation listeners
+  if (prevPageBtn) {
+    prevPageBtn.addEventListener('click', () => {
+      if (currentInboxPage > 1) {
+        currentInboxPage--;
+        renderResponseCards();
+      }
+    });
+  }
+  if (nextPageBtn) {
+    nextPageBtn.addEventListener('click', () => {
+      currentInboxPage++;
+      renderResponseCards();
+    });
+  }
+  if (footerPrevPageBtn) {
+    footerPrevPageBtn.addEventListener('click', () => {
+      if (currentInboxPage > 1) {
+        currentInboxPage--;
+        renderResponseCards();
+      }
+    });
+  }
+  if (footerNextPageBtn) {
+    footerNextPageBtn.addEventListener('click', () => {
+      currentInboxPage++;
+      renderResponseCards();
+    });
+  }
+  if (pageSizeSelect) {
+    pageSizeSelect.addEventListener('change', (e) => {
+      inboxPageSize = e.target.value === 'all' ? 'all' : parseInt(e.target.value, 10);
+      currentInboxPage = 1;
+      renderResponseCards();
+    });
+  }
+
+  // Column Stepper Navigation Listeners
+  [1, 2, 3, 4].forEach(idx => {
+    const prevBtn = document.getElementById(`colPrevBtn${idx}`);
+    const nextBtn = document.getElementById(`colNextBtn${idx}`);
+    if (prevBtn) {
+      prevBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (colPages[idx - 1] > 1) {
+          colPages[idx - 1]--;
+          renderResponseCards();
+        }
+      });
+    }
+    if (nextBtn) {
+      nextBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        colPages[idx - 1]++;
+        renderResponseCards();
+      });
+    }
+  });
+
+  // Sub-Tab Switcher (Keeps 4 Inboxes Side-by-Side in All Modes)
+  function switchInboxTab(tab) {
+    currentActiveInboxTab = tab;
+    colPages = [1, 1, 1, 1]; // Reset page steppers on tab switch
+
+    if (tab === 'side_by_side') {
+      if (tabModeSideBySide) tabModeSideBySide.classList.add('active');
+      if (tabNavGenuine) tabNavGenuine.classList.remove('active');
+      if (tabNavAutomated) tabNavAutomated.classList.remove('active');
+      if (cardFilterGenuine) cardFilterGenuine.classList.remove('active-metric');
+      if (cardFilterAutomated) cardFilterAutomated.classList.remove('active-metric');
+    } else if (tab === 'genuine') {
+      if (tabModeSideBySide) tabModeSideBySide.classList.remove('active');
+      if (tabNavGenuine) tabNavGenuine.classList.add('active');
+      if (tabNavAutomated) tabNavAutomated.classList.remove('active');
+      if (cardFilterGenuine) cardFilterGenuine.classList.add('active-metric');
+      if (cardFilterAutomated) cardFilterAutomated.classList.remove('active-metric');
+    } else {
+      if (tabModeSideBySide) tabModeSideBySide.classList.remove('active');
+      if (tabNavAutomated) tabNavAutomated.classList.add('active');
+      if (tabNavGenuine) tabNavGenuine.classList.remove('active');
+      if (cardFilterAutomated) cardFilterAutomated.classList.add('active-metric');
+      if (cardFilterGenuine) cardFilterGenuine.classList.remove('active-metric');
+    }
+
+    // ALWAYS keep 4 inboxes side-by-side!
+    if (sideBySideColumnsContainer) sideBySideColumnsContainer.classList.remove('hidden');
+    if (singleListViewContainer) singleListViewContainer.classList.add('hidden');
+
+    renderResponseCards();
+  }
+
+  if (tabModeSideBySide) tabModeSideBySide.addEventListener('click', () => switchInboxTab('side_by_side'));
+  if (tabNavGenuine) tabNavGenuine.addEventListener('click', () => switchInboxTab('genuine'));
+  if (tabNavAutomated) tabNavAutomated.addEventListener('click', () => switchInboxTab('automated'));
+  if (cardFilterGenuine) cardFilterGenuine.addEventListener('click', () => switchInboxTab('genuine'));
+  if (cardFilterAutomated) cardFilterAutomated.addEventListener('click', () => switchInboxTab('automated'));
+
+  // Account Switcher Pill Listeners
+  const accountPillBtns = document.querySelectorAll('#inboxAccountPills .account-pill-btn');
+  accountPillBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      accountPillBtns.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      currentActiveAccountFilter = btn.getAttribute('data-account') || 'all';
+      colPages = [1, 1, 1, 1]; // Reset page steppers
+      renderInboxView(currentInboxResponses);
+    });
+  });
+
+  if (inboxSearchInput) {
+    inboxSearchInput.addEventListener('input', () => {
+      colPages = [1, 1, 1, 1]; // Reset page steppers on search
+      renderResponseCards();
+    });
+  }
+
+  // Live Reader Pane Controller (Instant View on Card Click - Zero Scroll)
+  function openEmailInReaderPane(item) {
+    if (!item) return;
+    currentOpenItem = item;
+    activeExpandedCardId = item.id;
+
+    if (inboxActiveReaderPane) {
+      if (readerAccountBadge) {
+        readerAccountBadge.innerHTML = getAccountBadgeHtml(item.recipientAccount);
+      }
+      if (readerCategoryPill) {
+        const isGen = item.category === 'genuine' || item.isGenuine;
+        readerCategoryPill.textContent = isGen ? '🎯 Genuine HR' : '🤖 Auto-Reply';
+        readerCategoryPill.className = `reader-category-pill ${isGen ? 'pill-gen' : 'pill-auto'}`;
+      }
+      if (readerPriorityPill) {
+        if (item.actionPriority && item.actionPriority.includes('HIGH')) {
+          readerPriorityPill.classList.remove('hidden');
+          readerPriorityPill.textContent = item.actionPriority;
+        } else {
+          readerPriorityPill.classList.add('hidden');
+        }
+      }
+      if (readerDate) readerDate.textContent = item.dateFormatted || item.date;
+      if (readerCompany) readerCompany.textContent = item.company || 'Hiring Team';
+      if (readerSender) readerSender.textContent = `• ${item.senderName} <${item.senderEmail}>`;
+      if (readerSubject) readerSubject.textContent = item.subject || 'Application';
+      if (readerBodyText) readerBodyText.textContent = item.bodySnippet || 'No message content available.';
+      if (readerReplyGmailBtn) readerReplyGmailBtn.href = item.gmailSearchUrl || '#';
+
+      inboxActiveReaderPane.classList.remove('hidden');
+    }
+
+    // Re-render cards so active card expands right in place in its column
+    renderResponseCards();
+    // Zero scrolling needed! View stays right on the 3 columns
+  }
+
+  if (closeReaderPaneBtn) {
+    closeReaderPaneBtn.addEventListener('click', () => {
+      if (inboxActiveReaderPane) inboxActiveReaderPane.classList.add('hidden');
+      activeExpandedCardId = null;
+      currentOpenItem = null;
+      renderResponseCards();
+    });
+  }
+
+  if (readerCopyEmailBtn) {
+    readerCopyEmailBtn.addEventListener('click', () => {
+      if (currentOpenItem && currentOpenItem.senderEmail) {
+        navigator.clipboard.writeText(currentOpenItem.senderEmail).then(() => {
+          showToast(`Copied ${currentOpenItem.senderEmail} to clipboard!`, 'success');
+        });
+      }
+    });
+  }
+
+  if (readerCopySubjectBtn) {
+    readerCopySubjectBtn.addEventListener('click', () => {
+      if (currentOpenItem && currentOpenItem.subject) {
+        navigator.clipboard.writeText(currentOpenItem.subject).then(() => {
+          showToast(`Copied subject to clipboard!`, 'success');
+        });
+      }
+    });
+  }
+
+  // Delegated Click: Clicking ANY card in the 3 columns expands / collapses it inline
+  document.addEventListener('click', (e) => {
+    // 1. Collapse button inside expanded card
+    const collapseBtn = e.target.closest('.btn-collapse-card');
+    if (collapseBtn) {
+      e.stopPropagation();
+      activeExpandedCardId = null;
+      currentOpenItem = null;
+      if (inboxActiveReaderPane) inboxActiveReaderPane.classList.add('hidden');
+      renderResponseCards();
+      return;
+    }
+
+    // 2. Copy recruiter email button
+    const copyEmailBtn = e.target.closest('.btn-copy-recruiter');
+    if (copyEmailBtn) {
+      e.stopPropagation();
+      const email = copyEmailBtn.getAttribute('data-email');
+      if (email) {
+        navigator.clipboard.writeText(email).then(() => {
+          showToast(`Copied ${email} to clipboard!`, 'success');
+        });
+      }
+      return;
+    }
+
+    // 3. Copy subject button
+    const copySubjBtn = e.target.closest('.btn-copy-subj');
+    if (copySubjBtn) {
+      e.stopPropagation();
+      const subj = copySubjBtn.getAttribute('data-subj');
+      if (subj) {
+        navigator.clipboard.writeText(subj).then(() => {
+          showToast(`Copied subject to clipboard!`, 'success');
+        });
+      }
+      return;
+    }
+
+    // 4. Gmail reply link - allow native tab navigation
+    if (e.target.closest('.btn-open-gmail')) {
+      return;
+    }
+
+    // 5. Click on response card or "Read Email ▾" / "View Details"
+    const card = e.target.closest('.inbox-column-cards .response-card');
+    if (card) {
+      const id = card.getAttribute('data-id');
+      if (activeExpandedCardId === id) {
+        // Toggle collapsed if already active
+        activeExpandedCardId = null;
+        currentOpenItem = null;
+        if (inboxActiveReaderPane) inboxActiveReaderPane.classList.add('hidden');
+      } else {
+        activeExpandedCardId = id;
+        const allItems = [...(currentInboxResponses.genuine || []), ...(currentInboxResponses.automated || [])];
+        const item = allItems.find(x => x.id === id);
+        if (item) {
+          openEmailInReaderPane(item);
+          return;
+        }
+      }
+      renderResponseCards();
+      return;
+    }
+  });
+
+  function openInboxDetailModal(item) {
+    if (!inboxDetailModal) return;
+
+    activeModalEmail = item.senderEmail || '';
+
+    const modalAccountPill = document.getElementById('modalAccountPill');
+    if (modalAccountPill) {
+      modalAccountPill.innerHTML = getAccountBadgeHtml(item.recipientAccount);
+    }
+
+    if (modalTagPill) {
+      modalTagPill.textContent = item.tag;
+      modalTagPill.className = `badge-tag-pill ${item.tagType || 'accent'}`;
+    }
+    if (modalPriorityPill) {
+      if (item.actionPriority && item.actionPriority.includes('HIGH')) {
+        modalPriorityPill.classList.remove('hidden');
+        modalPriorityPill.textContent = item.actionPriority;
+      } else {
+        modalPriorityPill.classList.add('hidden');
+      }
+    }
+    if (modalSubject) modalSubject.textContent = item.subject;
+    if (modalCompany) modalCompany.textContent = item.company || 'Company';
+    if (modalSender) modalSender.textContent = `${item.senderName} <${item.senderEmail}>`;
+    if (modalDate) modalDate.textContent = item.dateFormatted || item.date;
+    if (modalMessageContent) modalMessageContent.textContent = item.bodySnippet || 'No text content available.';
+    if (modalOpenGmailBtn) modalOpenGmailBtn.href = item.gmailSearchUrl || '#';
+
+    inboxDetailModal.classList.remove('hidden');
+  }
+
+  if (closeInboxModalBtn) {
+    closeInboxModalBtn.addEventListener('click', () => {
+      if (inboxDetailModal) inboxDetailModal.classList.add('hidden');
+    });
+  }
+
+  if (modalCopyEmailBtn) {
+    modalCopyEmailBtn.addEventListener('click', () => {
+      if (activeModalEmail) {
+        navigator.clipboard.writeText(activeModalEmail).then(() => {
+          showToast(`Copied ${activeModalEmail} to clipboard!`, 'success');
+        });
+      }
+    });
+  }
+
+  if (inboxDetailModal) {
+    inboxDetailModal.addEventListener('click', (e) => {
+      if (e.target === inboxDetailModal) {
+        inboxDetailModal.classList.add('hidden');
+      }
+    });
+  }
+
+  // =============================================================
+  // 🧹 GMAIL INBOX BOUNCE & GHOST PURGE CONTROLLER
+  // =============================================================
+  let activeBounceAccount = '';
+  let currentBounceData = null;
+  let activeBounceTab = 'clear'; // 'clear' | 'doubt' | 'history'
+  let currentSnippetItem = null;
+
+  // DOM Elements
+  const bouncesAccountPills = document.getElementById('bouncesAccountPills');
+  const rescanBouncesBtn = document.getElementById('rescanBouncesBtn');
+  const rescanBouncesBtnText = document.getElementById('rescanBouncesBtnText');
+  const sweepSentBouncesBtn = document.getElementById('sweepSentBouncesBtn');
+  const sweepSentBtnText = document.getElementById('sweepSentBtnText');
+  const openPurgeModalBtn = document.getElementById('openPurgeModalBtn');
+  const purgeAllBtnText = document.getElementById('purgeAllBtnText');
+
+  const bouncesIndicationBox = document.getElementById('bouncesIndicationBox');
+  const bouncesIndicationIcon = document.getElementById('bouncesIndicationIcon');
+  const bouncesIndicationTitle = document.getElementById('bouncesIndicationTitle');
+  const bouncesIndicationText = document.getElementById('bouncesIndicationText');
+  const bouncesIndicationBadge = document.getElementById('bouncesIndicationBadge');
+
+  const statBouncesClearCount = document.getElementById('statBouncesClearCount');
+  const statBouncesDoubtCount = document.getElementById('statBouncesDoubtCount');
+  const statBouncesProtectedCount = document.getElementById('statBouncesProtectedCount');
+  const statBouncesTotalPurged = document.getElementById('statBouncesTotalPurged');
+  const navBounceCountBadge = document.getElementById('navBounceCountBadge');
+
+  const tabBounceClear = document.getElementById('tabBounceClear');
+  const tabBounceDoubt = document.getElementById('tabBounceDoubt');
+  const tabBounceHistory = document.getElementById('tabBounceHistory');
+  const tabCountClear = document.getElementById('tabCountClear');
+  const tabCountDoubt = document.getElementById('tabCountDoubt');
+  const tabCountHistory = document.getElementById('tabCountHistory');
+  const bouncesSearchInput = document.getElementById('bouncesSearchInput');
+
+  const bouncesClearList = document.getElementById('bouncesClearList');
+  const bouncesDoubtList = document.getElementById('bouncesDoubtList');
+  const bouncesHistoryList = document.getElementById('bouncesHistoryList');
+
+  // Modals
+  const bouncePurgeModal = document.getElementById('bouncePurgeModal');
+  const closeBouncePurgeModalBtn = document.getElementById('closeBouncePurgeModalBtn');
+  const cancelBouncePurgeBtn = document.getElementById('cancelBouncePurgeBtn');
+  const confirmBouncePurgeBtn = document.getElementById('confirmBouncePurgeBtn');
+  const confirmBouncePurgeBtnText = document.getElementById('confirmBouncePurgeBtnText');
+  const purgeModalIndicationTitle = document.getElementById('purgeModalIndicationTitle');
+  const purgeModalIndicationSub = document.getElementById('purgeModalIndicationSub');
+  const purgeTrashFolderLabel = document.getElementById('purgeTrashFolderLabel');
+  const purgeProgressBox = document.getElementById('purgeProgressBox');
+  const purgeProgressBarFill = document.getElementById('purgeProgressBarFill');
+  const purgeProgressText = document.getElementById('purgeProgressText');
+  const purgeProgressPercent = document.getElementById('purgeProgressPercent');
+
+  const bounceSnippetModal = document.getElementById('bounceSnippetModal');
+  const closeBounceSnippetModalBtn = document.getElementById('closeBounceSnippetModalBtn');
+  const dismissSnippetModalBtn = document.getElementById('dismissSnippetModalBtn');
+  const deleteFromSnippetModalBtn = document.getElementById('deleteFromSnippetModalBtn');
+  const snippetModalRecipient = document.getElementById('snippetModalRecipient');
+  const snippetModalReason = document.getElementById('snippetModalReason');
+  const snippetModalDate = document.getElementById('snippetModalDate');
+  const snippetModalBodyText = document.getElementById('snippetModalBodyText');
+
+  // Link Recruiter Radar Bounce card directly to this cleaner deck
+  const statBouncesCard = document.getElementById('statBouncesFiltered')?.closest('.inbox-metric-card');
+  if (statBouncesCard) {
+    statBouncesCard.classList.remove('metric-disabled');
+    statBouncesCard.style.cursor = 'pointer';
+    statBouncesCard.title = 'Click to open Ghost & Bounce Purge Deck';
+    statBouncesCard.addEventListener('click', () => switchToMode('bounces'));
+  }
+
+  // Account selector pills
+  if (bouncesAccountPills) {
+    bouncesAccountPills.querySelectorAll('.account-pill-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        bouncesAccountPills.querySelectorAll('.account-pill-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        activeBounceAccount = btn.getAttribute('data-account') || (window.__activeSenderAccounts && window.__activeSenderAccounts[0]) || '';
+        loadBounceScanner(activeBounceAccount);
+      });
+    });
+  }
+
+  const clearAuditHistoryBtn = document.getElementById('clearAuditHistoryBtn');
+  const emptyTrashBtn = document.getElementById('emptyTrashBtn');
+
+  // Tabs navigation
+  function switchBounceTab(tab) {
+    activeBounceTab = tab;
+    [tabBounceClear, tabBounceDoubt, tabBounceHistory].forEach(t => t && t.classList.remove('active'));
+    [bouncesClearList, bouncesDoubtList, bouncesHistoryList].forEach(l => l && l.classList.add('hidden'));
+
+    if (clearAuditHistoryBtn) clearAuditHistoryBtn.classList.toggle('hidden', tab !== 'history');
+    if (emptyTrashBtn) emptyTrashBtn.classList.toggle('hidden', tab !== 'history');
+
+    if (tab === 'clear') {
+      if (tabBounceClear) tabBounceClear.classList.add('active');
+      if (bouncesClearList) bouncesClearList.classList.remove('hidden');
+    } else if (tab === 'doubt') {
+      if (tabBounceDoubt) tabBounceDoubt.classList.add('active');
+      if (bouncesDoubtList) bouncesDoubtList.classList.remove('hidden');
+    } else if (tab === 'history') {
+      if (tabBounceHistory) tabBounceHistory.classList.add('active');
+      if (bouncesHistoryList) bouncesHistoryList.classList.remove('hidden');
+      loadBounceHistory();
+    }
+  }
+
+  if (tabBounceClear) tabBounceClear.addEventListener('click', () => switchBounceTab('clear'));
+  if (tabBounceDoubt) tabBounceDoubt.addEventListener('click', () => switchBounceTab('doubt'));
+  if (tabBounceHistory) tabBounceHistory.addEventListener('click', () => switchBounceTab('history'));
+
+  if (clearAuditHistoryBtn) {
+    clearAuditHistoryBtn.addEventListener('click', async () => {
+      try {
+        clearAuditHistoryBtn.disabled = true;
+        clearAuditHistoryBtn.textContent = '⏳ Clearing...';
+        const res = await fetch('/api/bounces/history', { method: 'DELETE' });
+        const data = await res.json();
+        if (data.success) {
+          showToast('Audit history log cleared successfully.', 'success');
+          loadBounceHistory();
+        } else {
+          showToast(data.error || 'Failed to clear history', 'danger');
+        }
+      } catch (e) {
+        showToast('Error: ' + e.message, 'danger');
+      } finally {
+        clearAuditHistoryBtn.disabled = false;
+        clearAuditHistoryBtn.textContent = '🗑️ Clear History Log';
+      }
+    });
+  }
+
+  if (emptyTrashBtn) {
+    emptyTrashBtn.addEventListener('click', async () => {
+      if (!confirm('Are you sure you want to permanently empty the Gmail Trash folder? This will delete all messages currently inside Trash/Bin forever.')) return;
+      try {
+        emptyTrashBtn.disabled = true;
+        emptyTrashBtn.textContent = '⏳ Emptying Trash...';
+        const res = await fetch('/api/bounces/empty-trash', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ account: activeBounceAccount })
+        });
+        const data = await res.json();
+        if (data.success) {
+          showToast('Gmail Trash permanently emptied!', 'success');
+          loadBounceScanner(activeBounceAccount);
+        } else {
+          showToast(data.error || 'Failed to empty trash', 'danger');
+        }
+      } catch (e) {
+        showToast('Error: ' + e.message, 'danger');
+      } finally {
+        emptyTrashBtn.disabled = false;
+        emptyTrashBtn.textContent = '🔥 Empty Gmail Trash';
+      }
+    });
+  }
+
+  // Sweep and clean failed sent mails from Sent Mail folder on demand
+  if (sweepSentBouncesBtn) {
+    sweepSentBouncesBtn.addEventListener('click', async () => {
+      if (!confirm(`Bro, sweep all historical failed/bounced sent emails from Gmail Sent Mail for ${activeBounceAccount}?\n\nThis will remove orphaned threads and 'reply was deleted' messages from your Gmail. All failed records remain safely stored in your local database so our bot will never email them again.`)) {
+        return;
+      }
+      sweepSentBouncesBtn.disabled = true;
+      if (sweepSentBtnText) sweepSentBtnText.textContent = '⏳ Sweeping Sent Mail...';
+      if (bouncesIndicationTitle) bouncesIndicationTitle.textContent = `Bro, sweeping Sent Mail in ${activeBounceAccount}...`;
+      if (bouncesIndicationText) bouncesIndicationText.textContent = 'Searching for sent emails to historical bounced recipients...';
+      if (bouncesIndicationBadge) {
+        bouncesIndicationBadge.textContent = 'CLEANING SENT';
+        bouncesIndicationBadge.className = 'callout-badge fill-danger';
+      }
+
+      try {
+        const res = await fetch('/api/bounces/purge-sent', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            account: activeBounceAccount,
+            sweepAllHistorical: true
+          })
+        });
+        const data = await res.json();
+        if (!data.success && data.error) throw new Error(data.error);
+
+        showToast(`🎉 Bro, moved ${data.purgedSentCount || 0} failed sent email(s) from Sent Mail to Trash in ${activeBounceAccount}!`, 'success');
+        loadBounceHistory();
+        loadBounceScanner(activeBounceAccount);
+      } catch (err) {
+        showToast(`Sent sweep failed: ${err.message}`, 'error');
+      } finally {
+        sweepSentBouncesBtn.disabled = false;
+        if (sweepSentBtnText) sweepSentBtnText.textContent = '🧹 Clean Sent Mail';
+      }
+    });
+  }
+
+  // Scan bounces function
+  async function loadBounceScanner(account = activeBounceAccount, { silent = false } = {}) {
+    if (!silent) {
+      if (rescanBouncesBtnText) rescanBouncesBtnText.textContent = '⏳ Scanning Inbox...';
+      if (rescanBouncesBtn) rescanBouncesBtn.disabled = true;
+      if (bouncesClearList) bouncesClearList.innerHTML = '<div class="inbox-loading-placeholder">Scanning INBOX for "Address not found" / Mail Subsystem failure emails via IMAP...</div>';
+      if (bouncesIndicationTitle) bouncesIndicationTitle.textContent = `Status: Scanning ${account}...`;
+      if (bouncesIndicationText) bouncesIndicationText.textContent = 'Connecting to Gmail IMAP to detect delivery failure reports...';
+      if (bouncesIndicationBadge) {
+        bouncesIndicationBadge.textContent = 'SCANNING';
+        bouncesIndicationBadge.className = 'callout-badge';
+      }
+    }
+
+    try {
+      const res = await fetch(`/api/bounces/preview?account=${encodeURIComponent(account)}&previewLimit=60`);
+      const data = await res.json();
+      if (!data.success && data.error) {
+        throw new Error(data.error);
+      }
+
+      currentBounceData = data;
+      renderBounceView();
+      updateBounceStats();
+    } catch (err) {
+      console.warn('Failed to scan bounces:', err.message);
+      if (bouncesClearList) {
+        bouncesClearList.innerHTML = `<div class="bounces-empty-notice"><span class="empty-icon">⚠️</span><h4>Failed to scan inbox</h4><p>${err.message}</p></div>`;
+      }
+      if (bouncesIndicationTitle) bouncesIndicationTitle.textContent = 'Scan encountered a notice';
+      if (bouncesIndicationText) bouncesIndicationText.textContent = err.message;
+    } finally {
+      if (rescanBouncesBtnText) rescanBouncesBtnText.textContent = '🔄 Rescan Inbox';
+      if (rescanBouncesBtn) rescanBouncesBtn.disabled = false;
+    }
+  }
+
+  // Update stats & user indication ("Bro, I'm deleting it")
+  function updateBounceStats() {
+    if (!currentBounceData) return;
+    const clearCount = currentBounceData.clearToDeleteCount || 0;
+    const doubtCount = currentBounceData.doubtReviewCount || 0;
+
+    if (statBouncesClearCount) statBouncesClearCount.textContent = clearCount.toLocaleString();
+    if (statBouncesDoubtCount) statBouncesDoubtCount.textContent = doubtCount.toLocaleString();
+    if (tabCountClear) tabCountClear.textContent = clearCount.toLocaleString();
+    if (tabCountDoubt) tabCountDoubt.textContent = doubtCount.toLocaleString();
+
+    // Top Header Badge
+    if (navBounceCountBadge) {
+      navBounceCountBadge.textContent = clearCount > 0 ? `${clearCount.toLocaleString()} Bounces (Clean)` : `Inbox Clean ✅`;
+    }
+
+    // Account pill counter for active account
+    const activePillCounter = document.querySelector(`.account-pill-btn[data-account="${activeBounceAccount}"] .pill-counter`);
+    if (activePillCounter) {
+      activePillCounter.textContent = clearCount.toLocaleString();
+    }
+
+    // Prominent Status Callout ("Bro, I'm deleting it")
+    if (bouncesIndicationTitle && bouncesIndicationText && bouncesIndicationBadge) {
+      if (clearCount > 0) {
+        bouncesIndicationTitle.textContent = `Bro, ${clearCount.toLocaleString()} 'Address not found' failure emails detected in ${activeBounceAccount}!`;
+        bouncesIndicationText.textContent = `All failed deliveries ready to move to Trash. Recruiter responses and ATS emails are 100% safe & untouched.`;
+        bouncesIndicationBadge.textContent = 'READY TO PURGE';
+        bouncesIndicationBadge.className = 'callout-badge';
+      } else {
+        bouncesIndicationTitle.textContent = `Bro, your INBOX in ${activeBounceAccount} is completely clean!`;
+        bouncesIndicationText.textContent = `Zero 'Address not found' or Mail Delivery Subsystem failure emails in your inbox.`;
+        bouncesIndicationBadge.textContent = 'CLEAN & SAFE';
+        bouncesIndicationBadge.className = 'callout-badge tag-danger';
+        bouncesIndicationBadge.style.color = '#10b981';
+        bouncesIndicationBadge.style.borderColor = 'rgba(16, 185, 129, 0.4)';
+        bouncesIndicationBadge.style.backgroundColor = 'rgba(16, 185, 129, 0.15)';
+      }
+    }
+  }
+
+  // Render cards
+  function renderBounceView() {
+    if (!currentBounceData) return;
+    const items = currentBounceData.previewItems || [];
+    const doubts = currentBounceData.doubtfulItems || [];
+    const query = (bouncesSearchInput ? bouncesSearchInput.value : '').toLowerCase().trim();
+
+    // 1. Render Clear to Delete Cards
+    const filteredClear = items.filter(it => {
+      if (!query) return true;
+      const haystack = `${it.failedRecipient} ${it.reason} ${it.snippet} ${it.subjectClean}`.toLowerCase();
+      return haystack.includes(query);
+    });
+
+    if (bouncesClearList) {
+      if (filteredClear.length === 0) {
+        if (currentBounceData.clearToDeleteCount === 0) {
+          bouncesClearList.innerHTML = `
+            <div class="bounces-empty-notice">
+              <span class="empty-icon">🎉</span>
+              <h4>Your Inbox is Clean!</h4>
+              <p>Zero "Address not found" or Mail Delivery Subsystem bounce emails in <strong>${activeBounceAccount}</strong>.</p>
+            </div>`;
+        } else {
+          bouncesClearList.innerHTML = `
+            <div class="bounces-empty-notice">
+              <span class="empty-icon">🔍</span>
+              <h4>No matching failure emails</h4>
+              <p>No bounce emails matched your search keyword.</p>
+            </div>`;
+        }
+      } else {
+        bouncesClearList.innerHTML = filteredClear.map(it => `
+          <div class="bounce-card bounce-card-danger" data-uid="${it.uid}">
+            <div class="bounce-card-header">
+              <div class="bounce-header-left">
+                <span class="bounce-card-tag tag-danger">🔴 CLEAR TO DELETE</span>
+                <span class="bounce-failed-recipient">🎯 ${escapeHtml(it.failedRecipient || 'Unknown Recipient')}</span>
+              </div>
+              <span class="bounce-card-date">${escapeHtml(it.dateStr || '')}</span>
+            </div>
+            <div class="bounce-card-body">
+              <div class="bounce-meta-row">
+                <span>From: <strong>${escapeHtml(it.fromClean || 'Mail Delivery Subsystem')}</strong></span>
+                <span>•</span>
+                <span>Subject: <strong>${escapeHtml(it.subjectClean || '')}</strong></span>
+              </div>
+              <div class="bounce-snippet-text">${escapeHtml(it.snippet || 'No error transcript snippet')}</div>
+            </div>
+            <div class="bounce-card-footer">
+              <div class="bounce-reason-label">
+                <span>⚡ Failure Reason:</span>
+                <strong>${escapeHtml(it.reason || 'Address not found')}</strong>
+              </div>
+              <div class="bounce-footer-actions">
+                <button type="button" class="btn-tiny btn-subtle btn-inspect-snippet" data-uid="${it.uid}">👁️ Full Diagnostic</button>
+                <button type="button" class="btn-card-delete btn-single-purge" data-uid="${it.uid}" data-recipient="${escapeHtml(it.failedRecipient || '')}">🗑️ Delete to Trash</button>
+              </div>
+            </div>
+          </div>
+        `).join('');
+
+        // Wire single purge buttons
+        bouncesClearList.querySelectorAll('.btn-single-purge').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const uid = parseInt(btn.getAttribute('data-uid'), 10);
+            const recip = btn.getAttribute('data-recipient') || '';
+            executeSinglePurge(uid, recip);
+          });
+        });
+
+        // Wire inspect buttons
+        bouncesClearList.querySelectorAll('.btn-inspect-snippet').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const uid = parseInt(btn.getAttribute('data-uid'), 10);
+            const item = items.find(i => i.uid === uid);
+            if (item) openSnippetModal(item);
+          });
+        });
+      }
+    }
+
+    // 2. Render Doubtful Cards
+    if (bouncesDoubtList) {
+      if (doubts.length === 0) {
+        bouncesDoubtList.innerHTML = `
+          <div class="bounces-empty-notice">
+            <span class="empty-icon">✅</span>
+            <h4>Zero Ambiguous Messages</h4>
+            <p>Every scanned failure is a confirmed 100% Mail Delivery Subsystem / Postmaster bounce. Recruiter replies are completely protected.</p>
+          </div>`;
+      } else {
+        bouncesDoubtList.innerHTML = doubts.map(it => `
+          <div class="bounce-card bounce-card-doubt" data-uid="${it.uid}">
+            <div class="bounce-card-header">
+              <div class="bounce-header-left">
+                <span class="bounce-card-tag tag-warning">⚠️ REVIEW NEEDED (DOUBTFUL)</span>
+                <span class="bounce-failed-recipient">❓ ${escapeHtml(it.failedRecipient || it.fromClean || 'Unknown')}</span>
+              </div>
+              <span class="bounce-card-date">${escapeHtml(it.dateStr || '')}</span>
+            </div>
+            <div class="bounce-card-body">
+              <div class="bounce-meta-row">
+                <span>From: <strong>${escapeHtml(it.fromClean || '')}</strong></span>
+                <span>•</span>
+                <span>Subject: <strong>${escapeHtml(it.subjectClean || '')}</strong></span>
+              </div>
+              <div class="bounce-snippet-text">${escapeHtml(it.snippet || 'No error transcript snippet')}</div>
+            </div>
+            <div class="bounce-card-footer">
+              <div class="bounce-reason-label" style="color: #fbbf24;">
+                <span>⚠️ Note:</span>
+                <strong>${escapeHtml(it.reason || 'Manual confirmation needed')}</strong>
+              </div>
+              <div class="bounce-footer-actions">
+                <button type="button" class="btn-tiny btn-subtle btn-inspect-snippet" data-uid="${it.uid}">👁️ Inspect Snippet</button>
+                <button type="button" class="btn-tiny btn-subtle btn-keep-item" data-uid="${it.uid}">🛡️ Keep in Inbox</button>
+                <button type="button" class="btn-card-delete btn-single-purge" data-uid="${it.uid}" data-recipient="${escapeHtml(it.failedRecipient || '')}">🗑️ Delete to Trash</button>
+              </div>
+            </div>
+          </div>
+        `).join('');
+
+        bouncesDoubtList.querySelectorAll('.btn-single-purge').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const uid = parseInt(btn.getAttribute('data-uid'), 10);
+            const recip = btn.getAttribute('data-recipient') || '';
+            executeSinglePurge(uid, recip);
+          });
+        });
+
+        bouncesDoubtList.querySelectorAll('.btn-keep-item').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const card = btn.closest('.bounce-card');
+            if (card) {
+              card.style.opacity = '0.4';
+              card.style.pointerEvents = 'none';
+              showToast('Marked as Kept in Inbox.', 'info');
+            }
+          });
+        });
+
+        bouncesDoubtList.querySelectorAll('.btn-inspect-snippet').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const uid = parseInt(btn.getAttribute('data-uid'), 10);
+            const item = doubts.find(i => i.uid === uid);
+            if (item) openSnippetModal(item);
+          });
+        });
+      }
+    }
+  }
+
+  // Search input filter
+  if (bouncesSearchInput) {
+    bouncesSearchInput.addEventListener('input', () => {
+      renderBounceView();
+    });
+  }
+
+  // Rescan button
+  if (rescanBouncesBtn) {
+    rescanBouncesBtn.addEventListener('click', () => {
+      loadBounceScanner(activeBounceAccount);
+    });
+  }
+
+  // Open Purge Modal
+  if (openPurgeModalBtn) {
+    openPurgeModalBtn.addEventListener('click', () => {
+      const clearCount = currentBounceData ? (currentBounceData.clearToDeleteCount || 0) : 0;
+      if (clearCount === 0) {
+        showToast('Bro, your INBOX has zero bounce emails to delete! It is already clean.', 'info');
+        return;
+      }
+
+      if (purgeModalIndicationTitle) {
+        purgeModalIndicationTitle.textContent = `"Bro, I'm deleting ${clearCount.toLocaleString()} bounce emails!"`;
+      }
+      if (purgeModalIndicationSub) {
+        purgeModalIndicationSub.innerHTML = `These failure emails will be moved directly from <strong>${activeBounceAccount}</strong> INBOX to <code id="purgeTrashFolderLabel">${currentBounceData.trashFolder || '[Gmail]/Bin'}</code>.`;
+      }
+      if (purgeProgressBox) purgeProgressBox.classList.add('hidden');
+      if (confirmBouncePurgeBtn) confirmBouncePurgeBtn.disabled = false;
+      if (confirmBouncePurgeBtnText) confirmBouncePurgeBtnText.textContent = 'Yes, Clean My Inbox Now ➔';
+
+      if (bouncePurgeModal) bouncePurgeModal.classList.remove('hidden');
+    });
+  }
+
+  // Close Purge Modal
+  if (closeBouncePurgeModalBtn) closeBouncePurgeModalBtn.addEventListener('click', () => bouncePurgeModal?.classList.add('hidden'));
+  if (cancelBouncePurgeBtn) cancelBouncePurgeBtn.addEventListener('click', () => bouncePurgeModal?.classList.add('hidden'));
+
+  // Confirm Purge Execution ("Bro, I'm deleting it")
+  if (confirmBouncePurgeBtn) {
+    confirmBouncePurgeBtn.addEventListener('click', async () => {
+      const clearCount = currentBounceData ? (currentBounceData.clearToDeleteCount || 0) : 0;
+      if (confirmBouncePurgeBtn) confirmBouncePurgeBtn.disabled = true;
+      if (confirmBouncePurgeBtnText) confirmBouncePurgeBtnText.textContent = '⏳ Bro, deleting bounce emails...';
+
+      if (purgeProgressBox) purgeProgressBox.classList.remove('hidden');
+      if (purgeProgressBarFill) purgeProgressBarFill.style.width = '35%';
+      if (purgeProgressText) purgeProgressText.textContent = `Moving ${clearCount.toLocaleString()} failure emails to Trash via IMAP...`;
+      if (purgeProgressPercent) purgeProgressPercent.textContent = '35%';
+
+      if (bouncesIndicationTitle) bouncesIndicationTitle.textContent = `Bro, I'm deleting ${clearCount.toLocaleString()} bounce emails right now...`;
+      if (bouncesIndicationText) bouncesIndicationText.textContent = `Executing IMAP UID MOVE to Trash for ${activeBounceAccount}...`;
+      if (bouncesIndicationBadge) {
+        bouncesIndicationBadge.textContent = 'PURGING INBOX';
+        bouncesIndicationBadge.className = 'callout-badge fill-danger';
+      }
+
+      try {
+        const res = await fetch('/api/bounces/purge', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            account: activeBounceAccount,
+            deleteAllConfirmed: true,
+            purgeSentMail: true,
+            failedRecipients: currentBounceData ? (currentBounceData.failedRecipients || []) : []
+          })
+        });
+
+        const data = await res.json();
+        if (!data.success && data.error) {
+          throw new Error(data.error);
+        }
+
+        const inboxCount = data.purgedCount || 0;
+        const sentCount = data.purgedSentCount || 0;
+        const total = inboxCount + sentCount;
+
+        if (purgeProgressBarFill) purgeProgressBarFill.style.width = '100%';
+        if (purgeProgressPercent) purgeProgressPercent.textContent = '100%';
+        if (purgeProgressText) {
+          purgeProgressText.textContent = sentCount > 0 
+            ? `Done! Moved ${inboxCount} inbox notice(s) and ${sentCount} sent email(s) to Trash.`
+            : `Done! Moved ${inboxCount} emails to Trash.`;
+        }
+
+        const msg = sentCount > 0
+          ? `🎉 Bro, successfully moved ${inboxCount} bounce notice(s) from INBOX and ${sentCount} original email(s) from Sent Mail to Trash! Zero trace left in Gmail.`
+          : `🎉 Bro, successfully moved ${inboxCount} bounce emails to Trash! Inbox is clean.`;
+
+        showToast(msg, 'success');
+
+        setTimeout(() => {
+          if (bouncePurgeModal) bouncePurgeModal.classList.add('hidden');
+          loadBounceScanner(activeBounceAccount);
+          loadBounceHistory();
+        }, 1200);
+
+      } catch (err) {
+        console.error('Purge error:', err);
+        showToast(`Purge failed: ${err.message}`, 'error');
+        if (confirmBouncePurgeBtn) confirmBouncePurgeBtn.disabled = false;
+        if (confirmBouncePurgeBtnText) confirmBouncePurgeBtnText.textContent = 'Retry Clean';
+      }
+    });
+  }
+
+  // Single Item Purge
+  async function executeSinglePurge(uid, recipient) {
+    if (!uid) return;
+    const card = document.querySelector(`.bounce-card[data-uid="${uid}"]`);
+    if (card) {
+      card.style.opacity = '0.5';
+      card.style.pointerEvents = 'none';
+    }
+
+    try {
+      const res = await fetch('/api/bounces/purge-single', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          account: activeBounceAccount,
+          uid
+        })
+      });
+
+      const data = await res.json();
+      if (!data.success && data.error) {
+        throw new Error(data.error);
+      }
+
+      showToast(`Moved bounce for ${recipient || 'recipient'} to Trash!`, 'success');
+      if (card) card.remove();
+
+      // Decrement count in state
+      if (currentBounceData && currentBounceData.clearToDeleteCount > 0) {
+        currentBounceData.clearToDeleteCount--;
+        updateBounceStats();
+      }
+    } catch (err) {
+      showToast(`Failed to delete message: ${err.message}`, 'error');
+      if (card) {
+        card.style.opacity = '1';
+        card.style.pointerEvents = 'auto';
+      }
+    }
+  }
+
+  // Diagnostic Snippet Modal
+  function openSnippetModal(item) {
+    currentSnippetItem = item;
+    if (snippetModalRecipient) snippetModalRecipient.textContent = item.failedRecipient || 'Unknown Recipient';
+    if (snippetModalReason) snippetModalReason.textContent = item.reason || 'Delivery Failure';
+    if (snippetModalDate) snippetModalDate.textContent = item.dateStr || 'Unknown Date';
+    if (snippetModalBodyText) snippetModalBodyText.textContent = item.snippet || 'No error transcript available.';
+
+    if (bounceSnippetModal) bounceSnippetModal.classList.remove('hidden');
+  }
+
+  if (closeBounceSnippetModalBtn) closeBounceSnippetModalBtn.addEventListener('click', () => bounceSnippetModal?.classList.add('hidden'));
+  if (dismissSnippetModalBtn) dismissSnippetModalBtn.addEventListener('click', () => bounceSnippetModal?.classList.add('hidden'));
+  if (deleteFromSnippetModalBtn) {
+    deleteFromSnippetModalBtn.addEventListener('click', () => {
+      if (currentSnippetItem && currentSnippetItem.uid) {
+        executeSinglePurge(currentSnippetItem.uid, currentSnippetItem.failedRecipient);
+        if (bounceSnippetModal) bounceSnippetModal.classList.add('hidden');
+      }
+    });
+  }
+
+  // Load Audit History
+  async function loadBounceHistory() {
+    if (!bouncesHistoryList) return;
+    try {
+      const res = await fetch('/api/bounces/history');
+      const data = await res.json();
+      const list = data.history || [];
+
+      if (tabCountHistory) tabCountHistory.textContent = list.length.toString();
+
+      // Update total purged stat
+      const totalPurged = list.reduce((sum, h) => sum + (h.totalPurged || (h.purgedCount || 0) + (h.purgedSentCount || 0)), 0);
+      if (statBouncesTotalPurged) statBouncesTotalPurged.textContent = totalPurged.toLocaleString();
+
+      if (list.length === 0) {
+        bouncesHistoryList.innerHTML = `<div class="bounces-empty-notice"><span class="empty-icon">📋</span><h4>No Purge History Yet</h4><p>When you delete delivery failure emails, audit records will appear here.</p></div>`;
+      } else {
+        bouncesHistoryList.innerHTML = list.map(h => {
+          const d = new Date(h.timestamp);
+          const timeFormatted = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+          const dateFormatted = d.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
+          const folder = h.trashFolder || '[Gmail]/Bin';
+          const count = h.purgedCount || 0;
+          const sentCount = h.purgedSentCount || 0;
+
+          let summaryText = '';
+          if (h.action === 'purge_sent_mail') {
+            summaryText = `Safely moved <strong>${sentCount}</strong> failed sent email(s) from Sent Mail (<code>${escapeHtml(h.sentFolder || '[Gmail]/Sent Mail')}</code>) into Trash.`;
+          } else if (sentCount > 0) {
+            summaryText = `Safely moved <strong>${count}</strong> bounce notice(s) from INBOX and <strong>${sentCount}</strong> original email(s) from Sent Mail into Trash. Zero trace left in Gmail.`;
+          } else {
+            summaryText = `Safely moved <strong>${count}</strong> 'Address not found' delivery failure notices from INBOX into Trash.`;
+          }
+
+          return `
+            <div class="bounce-history-card">
+              <div class="history-card-header">
+                <div class="history-badge-group">
+                  <span class="history-status-badge">
+                    <span class="pulse-dot-red" style="background:#10b981; box-shadow:0 0 6px #10b981; width:5px; height:5px;"></span>
+                    PURGE COMPLETED
+                  </span>
+                  <span class="history-account-chip">
+                    <span class="pill-badge-dot" style="background: ${h.account.includes('tiwari') ? '#3b82f6' : h.account.includes('creative') ? '#10b981' : '#a855f7'}; width:6px; height:6px;"></span>
+                    ${escapeHtml(h.account)}
+                  </span>
+                  <span class="history-folder-chip">
+                    📁 ${escapeHtml(folder)}
+                  </span>
+                </div>
+                <span class="history-timestamp">${dateFormatted} • ${timeFormatted}</span>
+              </div>
+              <div class="history-card-body">
+                <div class="history-summary-text">
+                  ${summaryText}
+                </div>
+                <div class="history-protection-pill">
+                  🛡️ Recruiter replies & ATS: 100% untouched
+                </div>
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
+    } catch (e) {
+      console.warn('Failed to load history:', e.message);
+    }
+  }
+
+  // -------------------------------------------------------------
   // Initial Boot
   // -------------------------------------------------------------
   verifySmtpConnection();
   checkDefaultResume();
   loadSavedContacts();
   loadVaultData();
+  loadValidationStats(); // Initial fetch of RFC 5321 deliverability stats
+  loadInboxResponses(); // Initial fetch of recruiter responses
+  loadBounceScanner(activeBounceAccount, { silent: true }); // Pre-fetch bounce count for badge
+  loadBounceHistory(); // Fetch audit history
   updateManualDetectedCount();
   updateLivePreview();
-  startCampaignPolling(); // Immediately syncs if campaign already running on backend!
+  startCampaignPolling(); // Polls manual campaign
+  pollAutonomousStatus(); // Initial fetch
+  setInterval(pollAutonomousStatus, 1000); // 1-second live polling for autonomous engine!
+  setInterval(loadValidationStats, 5000); // Keep RFC 5321 validation stats fresh every 5s!
+  setInterval(loadInboxResponses, 30000); // Auto-refresh Inbox Radar responses every 30s!
 });

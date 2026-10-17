@@ -7,7 +7,7 @@
   <link rel="stylesheet" href="styles.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
   <div class="app-layout">
@@ -18,6 +18,29 @@
         <h1>Resume Blaster</h1>
         <span class="version-tag">v1.2</span>
       </div>
+      <!-- Top Mode Switcher -->
+      <div class="header-mode-nav">
+        <button type="button" id="modeAutonomousBtn" class="mode-tab-btn active">
+          <span class="mode-tab-icon">🤖</span>
+          <span class="mode-tab-label">AI Autopilot</span>
+          <span class="mode-tab-pill">60 / Batch</span>
+        </button>
+        <button type="button" id="modeManualBtn" class="mode-tab-btn">
+          <span class="mode-tab-icon">📁</span>
+          <span class="mode-tab-label">PDF Campaign</span>
+        </button>
+        <button type="button" id="modeInboxBtn" class="mode-tab-btn">
+          <span class="mode-tab-icon">📬</span>
+          <span class="mode-tab-label">Inbox Radar</span>
+          <span class="mode-tab-pill tab-pill-highlight" id="navGenuineBadge">🎯 22 Leads</span>
+        </button>
+        <button type="button" id="modeBouncesBtn" class="mode-tab-btn">
+          <span class="mode-tab-icon">🧹</span>
+          <span class="mode-tab-label">Ghost Cleaner</span>
+          <span class="mode-tab-pill tab-pill-warning" id="navBounceCountBadge">Auto-Clean</span>
+        </button>
+      </div>
+
       <div class="header-actions">
         <div id="smtpStatusBadge" class="status-indicator checking">
           <span class="dot"></span>
@@ -27,8 +50,424 @@
       </div>
     </header>
 
-    <!-- Main Workspace Grid -->
-    <main class="workspace-grid">
+    <!-- AUTONOMOUS 100% HANDS-FREE VIEW -->
+    <div id="autonomousView" class="autonomous-view">
+      <!-- Autonomous Left Column: Settings & Configuration -->
+      <section class="panel auto-config-panel">
+        <div class="auto-hero-banner">
+          <div class="auto-hero-header">
+            <div class="auto-hero-badge">🤖 100% HANDS-FREE</div>
+            <h2>Autonomous AI Outreach Engine</h2>
+          </div>
+          <p class="auto-hero-desc">
+            Automatically finds verified tech HR contacts in <strong>Mumbai & Remote India</strong>, dispatches safe batches of <strong>60 emails</strong> with 8-14s human pacing, rests for <strong>12 minutes</strong>, and caps safely at <strong>400 sends/day</strong>.
+          </p>
+        </div>
+
+        <!-- Recruiter Response Alert Banner -->
+        <div class="auto-response-alert-banner" id="autoResponseAlertBanner">
+          <div class="alert-banner-left">
+            <span class="alert-banner-icon">🎯</span>
+            <div class="alert-banner-text">
+              <strong id="autoAlertTitle">Recruiter Responses Detected!</strong>
+              <p id="autoAlertSub">Active HR replies found from Acko, DigiChefs, Myntmore, Kwebmaker & more.</p>
+            </div>
+          </div>
+          <button type="button" class="btn-micro btn-accent" id="autoGoToInboxBtn">View Inquiries ➔</button>
+        </div>
+
+        <!-- Resume Attachment Card -->
+        <div class="auto-card">
+          <div class="auto-card-header">
+            <h3>1. Active Resume Attachment</h3>
+            <span class="badge-success" id="autoResumeStatusBadge">✅ Ready</span>
+          </div>
+          <div class="auto-resume-box">
+            <div class="auto-resume-info">
+              <span class="auto-resume-icon">📑</span>
+              <div>
+                <strong id="autoResumeNameDisplay">Ketan_Resume.pdf</strong>
+                <div class="auto-resume-sub" id="autoResumeSizeDisplay">Pre-loaded from workspace root (705 KB)</div>
+              </div>
+            </div>
+            <button type="button" class="btn-tiny btn-subtle" id="autoChangeResumeBtn">📤 Upload Different Resume</button>
+            <input type="file" id="autoResumeFileInput" accept=".pdf,application/pdf" hidden>
+          </div>
+        </div>
+
+        <!-- Autonomous Engine Parameters -->
+        <div class="auto-card">
+          <div class="auto-card-header">
+            <h3>2. Outreach Engine Controls</h3>
+            <span class="badge-accent">Automated</span>
+          </div>
+
+          <div class="auto-controls-grid">
+            <div class="auto-control-field">
+              <label for="autoLocationSelect">Target Directory & Location:</label>
+              <select id="autoLocationSelect" class="auto-select">
+                <option value="all" selected>🏢 Mumbai & Remote Tech Startups (Recommended)</option>
+                <option value="mumbai">📍 Mumbai Tech Startups & Scaleups Only</option>
+                <option value="remote">🌐 Remote India Tech Startups Only</option>
+              </select>
+            </div>
+
+            <div class="auto-controls-row">
+              <div class="auto-control-field">
+                <label for="autoBatchSizeInput">Batch Size:</label>
+                <div class="input-with-suffix">
+                  <input type="number" id="autoBatchSizeInput" value="60" min="5" max="100">
+                  <span class="input-suffix">emails / batch</span>
+                </div>
+              </div>
+
+              <div class="auto-control-field">
+                <label for="autoPauseMinutesSelect">Cooldown Break:</label>
+                <select id="autoPauseMinutesSelect" class="auto-select">
+                  <option value="6" selected>6 minutes (Quick Break - Ketan's Choice)</option>
+                  <option value="5">5 minutes</option>
+                  <option value="10">10 minutes</option>
+                  <option value="12">12 minutes</option>
+                  <option value="15">15 minutes</option>
+                  <option value="1">1 minute (Quick Test)</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Built-In Safety Guarantees -->
+            <div class="auto-safety-box">
+              <div class="safety-item">
+                <span class="safety-icon">🛡️</span>
+                <span><strong>400 Emails/Day Multi-Sender Cap:</strong> 100/day across active accounts to preserve Gmail health.</span>
+              </div>
+              <div class="safety-item">
+                <span class="safety-icon">⏱️</span>
+                <span><strong>8–14s Human Pacing:</strong> Simulates human manual sending with zero spam flags.</span>
+              </div>
+              <div class="safety-item">
+                <span class="safety-icon">⚡</span>
+                <span><strong>Zero-Bounce Protection:</strong> DNS MX + mailbox pre-flight check before every dispatch.</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Active Senders Multi-Account Card -->
+        <div class="auto-card auto-sender-card">
+          <div class="auto-card-header">
+            <h3>👥 Active Sender Accounts (Multi-Inbox Rotation)</h3>
+            <span class="badge-success" id="autoSenderCountBadge">Active</span>
+          </div>
+          <div class="multi-sender-list" id="autoSenderListContainer">
+            <div class="sender-account-row">
+              <div class="sender-row-top">
+                <div class="sender-acc-left">
+                  <span class="sender-dot dot-online"></span>
+                  <strong class="sender-email">Sender Account 1</strong>
+                </div>
+                <span class="sender-label-badge">Sender 1</span>
+              </div>
+              <div class="sender-row-meta">
+                <span class="quota-text" id="quota-tiwari">Today: <strong id="quotaVal-tiwari">0</strong> / 100</span>
+                <span class="sender-health-tag">🟢 Verified · 0 Bounces</span>
+              </div>
+            </div>
+            <div class="sender-account-row">
+              <div class="sender-row-top">
+                <div class="sender-acc-left">
+                  <span class="sender-dot dot-online"></span>
+                  <strong class="sender-email">Sender Account 2</strong>
+                </div>
+                <span class="sender-label-badge">Sender 2</span>
+              </div>
+              <div class="sender-row-meta">
+                <span class="quota-text" id="quota-creative">Today: <strong id="quotaVal-creative">0</strong> / 100</span>
+                <span class="sender-health-tag">🟢 Verified · 0 Bounces</span>
+              </div>
+            </div>
+            <div class="sender-account-row">
+              <div class="sender-row-top">
+                <div class="sender-acc-left">
+                  <span class="sender-dot dot-online"></span>
+                  <strong class="sender-email">Sender Account 3</strong>
+                </div>
+                <span class="sender-label-badge">Sender 3</span>
+              </div>
+              <div class="sender-row-meta">
+                <span class="quota-text" id="quota-devil">Today: <strong id="quotaVal-devil">0</strong> / 100</span>
+                <span class="sender-health-tag">🟢 Verified · 0 Bounces</span>
+              </div>
+            </div>
+            <div class="sender-account-row">
+              <div class="sender-row-top">
+                <div class="sender-acc-left">
+                  <span class="sender-dot dot-online"></span>
+                  <strong class="sender-email">Sender Account 4</strong>
+                </div>
+                <span class="sender-label-badge badge-sender4">Sender 4</span>
+              </div>
+              <div class="sender-row-meta">
+                <span class="quota-text" id="quota-ketan181">Today: <strong id="quotaVal-ketan181">0</strong> / 100</span>
+                <span class="sender-health-tag">🟢 Verified · 0 Bounces</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Email Pitch & Personalization Preview (Collapsible) -->
+        <div class="auto-card auto-card-collapsible">
+          <div class="auto-card-header clickable" id="autoTogglePitchBtn">
+            <h3>4. Cover Message & Template</h3>
+            <div class="header-right">
+              <span class="auto-card-summary">Application: Software Engineering & AI Intern</span>
+              <span class="accordion-arrow" id="autoPitchArrow">▼</span>
+            </div>
+          </div>
+          <div class="auto-collapsible-body hidden" id="autoPitchBody">
+            <div class="form-group">
+              <label for="autoSenderName">Sender Full Name:</label>
+              <input type="text" id="autoSenderName" value="Ketan Tiwari">
+            </div>
+            <div class="form-group">
+              <label for="autoSubject">Subject Line:</label>
+              <input type="text" id="autoSubject" value="Application: Software Engineering & AI Intern - Ketan Tiwari - {{company}}">
+            </div>
+            <div class="form-group">
+              <label for="autoMessage">Message Body:</label>
+              <textarea id="autoMessage" rows="7">Dear {{name}},
+
+I hope you are doing well.
+
+I am writing to inquire about Software Engineering and AI Internship opportunities at {{company}}.
+
+I am a Full-Stack & Generative AI Engineer with hands-on experience building production-ready LLM/RAG pipelines, autonomous agentic workflows, scalable backend APIs, and modern web applications. I am keen to join {{company}} as an engineering intern to contribute directly to impactful projects and learn from your talented engineering team.
+
+Please find my resume attached for your review. I would welcome the opportunity for a brief conversation to discuss how I can add value to your team.
+
+Thank you for your time and consideration.
+
+Best regards,
+Ketan Tiwari
+{{sender_email}}</textarea>
+            </div>
+          </div>
+        </div>
+
+        <!-- Primary Start Button -->
+        <div class="auto-launch-box">
+          <div class="dry-run-control-row">
+            <label class="dry-run-toggle-label" for="autoDryRunCheckbox">
+              <input type="checkbox" id="autoDryRunCheckbox">
+              <span class="dry-run-checkbox-box"></span>
+              <span class="dry-run-text">🧪 <strong>Dry-Run Mode:</strong> Simulate validation & dispatch workflow without sending real emails</span>
+            </label>
+          </div>
+          <button type="button" id="startAutonomousBtn" class="btn-primary btn-auto-launch">
+            <span class="launch-icon">🚀</span>
+            <span id="startAutonomousBtnLabel">Start 100% Autonomous Outreach</span>
+          </button>
+          <p class="auto-launch-note">
+            💡 <strong>Zero permissions needed:</strong> System runs continuously, dispatches 60 emails with 8-14s human delays, takes a 12-minute break, and auto-repeats safely up to your 400 emails/day cap!
+          </p>
+        </div>
+      </section>
+
+      <!-- Autonomous Right Column: Mission Control & Live Stream -->
+      <section class="panel auto-monitor-panel">
+        <div class="panel-header">
+          <h2>Autonomous Mission Control</h2>
+          <span class="badge-accent">Live Dashboard</span>
+        </div>
+
+        <!-- Status & Master Actions Bar -->
+        <div class="auto-status-bar">
+          <div class="auto-status-badge idle" id="autoStatusBadge">
+            <span class="pulse-dot"></span>
+            <span id="autoStatusText">Ready / Idle</span>
+          </div>
+
+          <div class="auto-actions-row">
+            <button type="button" id="pauseAutonomousBtn" class="btn-tiny btn-warning-action hidden">⏸️ Pause</button>
+            <button type="button" id="skipBreakAutonomousBtn" class="btn-tiny btn-accent hidden">⚡ Skip Break & Send Batch Now</button>
+            <button type="button" id="stopAutonomousBtn" class="btn-tiny btn-danger hidden">⏹️ Stop Engine</button>
+          </div>
+        </div>
+
+        <!-- Glowing Countdown Clock (Visible during cooldown break) -->
+        <div class="auto-clock-card hidden" id="autoClockCard">
+          <div class="auto-clock-badge">☕ 12-MINUTE COOLDOWN ACTIVE</div>
+          <div class="auto-clock-timer" id="autoClockTimer">11:59</div>
+          <div class="auto-clock-label">Taking Cooldown Pause Between Batches</div>
+          <p class="auto-clock-sub" id="autoClockSub">
+            Auto-checking Gmail for bounces via IMAP... Next batch of 60 emails will dispatch automatically without any permission needed.
+          </p>
+        </div>
+
+        <!-- Dual Stream Quota Hub (250 Indian Startups + 150 Foreign HRs) -->
+        <div class="dual-stream-banner">
+          <div class="dual-stream-card dual-card-india">
+            <div class="dual-card-header">
+              <div class="dual-tag-wrap">
+                <span class="stream-flag">🇮🇳</span>
+                <span class="stream-title">Indian Tech Startups & Scaleups</span>
+              </div>
+              <span class="stream-badge stream-badge-india" id="autoIndiaLimitBadge">Daily Goal: 250</span>
+            </div>
+            <div class="stream-count-row">
+              <span class="stream-big-num text-india" id="autoMetricIndiaSent">0</span>
+              <span class="stream-slash" id="autoIndiaSlash">/ 250 sent</span>
+              <span class="stream-pct-badge badge-india-pct" id="autoIndiaPct">0%</span>
+            </div>
+            <div class="stream-progress-track">
+              <div class="stream-progress-fill fill-india" id="autoIndiaProgressFill" style="width: 0%;"></div>
+            </div>
+            <div class="stream-footer-meta">
+              <span>📍 Mumbai, Bengaluru, Pune & Remote India</span>
+              <span id="autoIndiaRemaining" class="meta-remaining">250 remaining</span>
+            </div>
+          </div>
+
+          <div class="dual-stream-card dual-card-foreign">
+            <div class="dual-card-header">
+              <div class="dual-tag-wrap">
+                <span class="stream-flag">🌍</span>
+                <span class="stream-title">Global & Foreign Tech HRs</span>
+              </div>
+              <span class="stream-badge stream-badge-foreign" id="autoForeignLimitBadge">Daily Goal: 150</span>
+            </div>
+            <div class="stream-count-row">
+              <span class="stream-big-num text-foreign" id="autoMetricForeignSent">0</span>
+              <span class="stream-slash" id="autoForeignSlash">/ 150 sent</span>
+              <span class="stream-pct-badge badge-foreign-pct" id="autoForeignPct">0%</span>
+            </div>
+            <div class="stream-progress-track">
+              <div class="stream-progress-fill fill-foreign" id="autoForeignProgressFill" style="width: 0%;"></div>
+            </div>
+            <div class="stream-footer-meta">
+              <span>🌐 US Tech Hubs, UK, Europe, Canada & Global YC</span>
+              <span id="autoForeignRemaining" class="meta-remaining">150 remaining</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 4 Metric Cards -->
+        <div class="auto-metrics-grid">
+          <div class="auto-metric-card">
+            <div class="metric-top">
+              <span class="metric-label">Total Daily Safe Cap</span>
+              <span class="metric-limit" id="autoDailyLimitBadge">400 Max</span>
+            </div>
+            <div class="metric-number-row">
+              <span class="metric-number" id="autoMetricSentToday">0</span>
+              <span class="metric-slash" id="autoDailySlash">/ 400</span>
+            </div>
+            <div class="metric-progress-track">
+              <div class="metric-progress-fill" id="autoDailyProgressFill" style="width: 0%;"></div>
+            </div>
+            <div class="metric-sub">Across 4 sender inboxes (100 each)</div>
+          </div>
+
+          <div class="auto-metric-card">
+            <div class="metric-top">
+              <span class="metric-label">Current Batch Progress</span>
+              <span class="metric-limit" id="autoMetricBatchLimit">Target: 60</span>
+            </div>
+            <div class="metric-number-row">
+              <span class="metric-number text-accent" id="autoMetricBatchProgress">0</span>
+              <span class="metric-slash" id="autoMetricBatchSlash">/ 60</span>
+            </div>
+            <div class="metric-progress-track">
+              <div class="metric-progress-fill fill-batch" id="autoBatchProgressFill" style="width: 0%;"></div>
+            </div>
+            <div class="metric-sub" id="autoMetricBatchSub">Batch 0 · ~38 🇮🇳 / ~22 🌍</div>
+          </div>
+
+          <div class="auto-metric-card">
+            <div class="metric-top">
+              <span class="metric-label">Lifetime Delivered</span>
+              <span class="metric-limit">Clean Inboxes</span>
+            </div>
+            <div class="metric-number-row">
+              <span class="metric-number text-success" id="autoMetricLifetimeDelivered">0</span>
+            </div>
+            <div class="metric-sub">Across all batches</div>
+          </div>
+
+          <div class="auto-metric-card">
+            <div class="metric-top">
+              <span class="metric-label">Bounces Prevented</span>
+              <span class="metric-limit">Pre-Flight Blocked</span>
+            </div>
+            <div class="metric-number-row">
+              <span class="metric-number text-warning" id="autoMetricLifetimeFiltered">0</span>
+            </div>
+            <div class="metric-sub">Protected Gmail health</div>
+          </div>
+        </div>
+
+        <!-- Deliverability & RFC 5321 Validation Radar Deck -->
+        <div class="validation-radar-card">
+          <div class="validation-radar-header">
+            <div class="radar-title-wrap">
+              <span class="radar-pulse-dot"></span>
+              <strong>RFC 5321 Validation & Deliverability Radar</strong>
+              <span class="radar-tag">Live Engine Audit</span>
+            </div>
+            <button type="button" class="btn-micro" id="refreshValidationStatsBtn">🔄 Refresh Stats</button>
+          </div>
+          <div class="validation-stats-grid">
+            <div class="vstat-item vstat-valid">
+              <span class="vstat-val" id="vstatValid">0</span>
+              <span class="vstat-label">🟢 Deliverable / Valid</span>
+              <span class="vstat-sub">MX & Implicit A Fallback</span>
+            </div>
+            <div class="vstat-item vstat-invalid">
+              <span class="vstat-val" id="vstatInvalid">0</span>
+              <span class="vstat-label">🔴 Dead / Invalid</span>
+              <span class="vstat-sub">NXDOMAIN & Syntax Errors</span>
+            </div>
+            <div class="vstat-item vstat-suppressed">
+              <span class="vstat-val" id="vstatSuppressed">0</span>
+              <span class="vstat-label">🚫 Suppressed List</span>
+              <span class="vstat-sub">550 Hard Bounces Blocked</span>
+            </div>
+            <div class="vstat-item vstat-pending">
+              <span class="vstat-val" id="vstatPending">0</span>
+              <span class="vstat-label">⏳ Pending / Deferred</span>
+              <span class="vstat-sub">Inconclusive DNS Safe-Hold</span>
+            </div>
+            <div class="vstat-item vstat-tempfail">
+              <span class="vstat-val" id="vstatTempFail">0</span>
+              <span class="vstat-label">⚠️ Soft Bounces</span>
+              <span class="vstat-sub">Backoff Exponential Retries</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Live Autonomous Activity Terminal Stream -->
+        <div class="auto-terminal-card">
+          <div class="auto-terminal-header">
+            <div class="terminal-title-wrap">
+              <span class="terminal-dot"></span>
+              <strong>Live Activity Stream</strong>
+              <span class="terminal-tag">Real-Time Engine Logs</span>
+            </div>
+            <div class="terminal-controls">
+              <label class="terminal-autoscroll-label">
+                <input type="checkbox" id="autoTerminalScrollCheck" checked> Auto-Scroll
+              </label>
+              <button type="button" class="btn-micro" id="clearAutoTerminalBtn">Clear</button>
+            </div>
+          </div>
+          <div class="auto-terminal-body" id="autoTerminalBody">
+            <div class="terminal-line terminal-dim">[SYSTEM READY] Autonomous outreach engine standing by. Click 'Start Autonomous Outreach' to begin.</div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- MANUAL / CUSTOM PDF WORKSPACE GRID (Toggled via Header Nav) -->
+    <main class="workspace-grid hidden" id="manualWorkspaceGrid">
       <!-- LEFT COLUMN: Campaign Configuration -->
       <section class="panel composer-panel">
         <div class="panel-header">
@@ -122,7 +561,7 @@ Thank you for your time and consideration.
 
 Best regards,
 Ketan Tiwari
-tiwariketan045@gmail.com</textarea>
+{{sender_email}}</textarea>
 
           <!-- Real-Time Personalization Live Preview -->
           <div class="live-preview-container">
@@ -157,9 +596,9 @@ Thank you for your time and consideration.
 
 Best regards,
 Ketan Tiwari
-tiwariketan045@gmail.com</div>
+{{sender_email}} (Dynamic: rotates between all 4 active senders)</div>
               <div class="preview-security-badge">
-                <span>🛡️ <strong>100% Dynamic Personalization Active:</strong> Har HR ko unka <strong>asli naam</strong> aur unki <strong>company ka asli naam</strong> lag kar hi email send hoga. Koi bhi bracket text email me nahi jayega!</span>
+                <span>🛡️ <strong>100% Dynamic Personalization Active:</strong> Har HR ko unka <strong>asli naam</strong>, company ka <strong>asli naam</strong>, aur active sending account ka <strong>asli email</strong> dynamically lag kar hi email send hoga!</span>
               </div>
             </div>
           </div>
@@ -190,6 +629,14 @@ tiwariketan045@gmail.com</div>
               <label>Intra-Email Delay:</label>
               <span class="pill-info">4 - 8s Random (Safe Pacing)</span>
             </div>
+          </div>
+
+          <div class="dry-run-control-row">
+            <label class="dry-run-toggle-label" for="manualDryRunCheckbox">
+              <input type="checkbox" id="manualDryRunCheckbox">
+              <span class="dry-run-checkbox-box"></span>
+              <span class="dry-run-text">🧪 <strong>Dry-Run Mode:</strong> Simulate validation & dispatch workflow without sending real emails</span>
+            </label>
           </div>
 
           <div class="action-row">
@@ -449,6 +896,629 @@ tiwariketan045@gmail.com</div>
         </div>
       </section>
     </main>
+
+    <!-- 📬 INBOX RESPONSE RADAR VIEW (Toggled via Header Nav) -->
+    <div id="inboxView" class="inbox-view hidden">
+      <!-- Top Hero / Stats Banner -->
+      <section class="panel inbox-hero-panel">
+        <div class="inbox-hero-header">
+          <div>
+            <div class="inbox-badge">📬 INBOX RADAR & CLASSIFIER</div>
+            <h2>Recruiter Response Intelligence</h2>
+            <p class="inbox-desc">
+              Bounces, delivery failures, and marketing newsletters are automatically filtered out. Responses are strictly divided into 
+              <strong>🎯 Genuine HR Inquiries</strong> (interviews, assessments, CTC requests) and <strong>🤖 Automated Bot Auto-Replies</strong>.
+            </p>
+          </div>
+          <div class="inbox-actions-wrap">
+            <div class="auto-sync-status-box" id="autoSyncStatusBox">
+              <div class="auto-sync-status-row">
+                <span class="auto-sync-indicator dot-active" id="autoSyncDot"></span>
+                <span class="auto-sync-title">Auto-Sync (5 Min):</span>
+                <span class="auto-sync-status-text" id="autoSyncStateText">ACTIVE</span>
+              </div>
+              <div class="auto-sync-countdown" id="autoSyncCountdownLabel">Next sync in: <strong>05:00</strong></div>
+            </div>
+            <div class="inbox-btn-row">
+              <button type="button" class="btn-subtle btn-auto-sync-toggle" id="toggleAutoSyncBtn" title="Toggle 5-minute background auto-sync">
+                <span id="toggleAutoSyncBtnText">⏸️ Pause Auto-Sync</span>
+              </button>
+              <button type="button" class="btn-primary btn-sync-inbox" id="syncInboxBtn">
+                <span id="syncInboxBtnText">🔄 Sync All 4 Now</span>
+              </button>
+            </div>
+            <div class="inbox-last-synced" id="inboxLastSyncedLabel">Last Synced: Checking...</div>
+          </div>
+        </div>
+
+        <!-- Quad-Account Filter Switcher -->
+        <div class="inbox-account-pills-bar">
+          <div class="account-pill-label">Sender Account:</div>
+          <div class="account-pills-group" id="inboxAccountPills">
+            <button type="button" class="account-pill-btn active" data-account="all">
+              <span class="pill-badge-dot dot-all"></span>
+              <span class="pill-text">All 4 Inboxes</span>
+              <span class="pill-counter" id="pillCountAll">0</span>
+            </button>
+            <button type="button" class="account-pill-btn" data-account="account1">
+              <span class="pill-badge-dot dot-acc1"></span>
+              <span class="pill-text">Sender 1</span>
+              <span class="pill-counter" id="pillCountAcc1">0</span>
+            </button>
+            <button type="button" class="account-pill-btn" data-account="account2">
+              <span class="pill-badge-dot dot-acc2"></span>
+              <span class="pill-text">Sender 2</span>
+              <span class="pill-counter" id="pillCountAcc2">0</span>
+            </button>
+            <button type="button" class="account-pill-btn" data-account="account3">
+              <span class="pill-badge-dot dot-acc3"></span>
+              <span class="pill-text">Sender 3</span>
+              <span class="pill-counter" id="pillCountAcc3">0</span>
+            </button>
+            <button type="button" class="account-pill-btn" data-account="account4">
+              <span class="pill-badge-dot dot-acc4"></span>
+              <span class="pill-text">Sender 4</span>
+              <span class="pill-counter" id="pillCountAcc4">0</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Metric Cards Grid -->
+        <div class="inbox-metrics-grid">
+          <div class="inbox-metric-card active-metric" id="cardFilterGenuine" data-type="genuine">
+            <div class="metric-icon-wrap icon-genuine">🎯</div>
+            <div class="metric-text-wrap">
+              <div class="metric-val" id="statGenuineCount">0</div>
+              <div class="metric-lbl">Genuine HR Inquiries</div>
+              <div class="metric-sub-pill pill-accent">Action Needed</div>
+            </div>
+          </div>
+
+          <div class="inbox-metric-card" id="cardFilterAutomated" data-type="automated">
+            <div class="metric-icon-wrap icon-bot">🤖</div>
+            <div class="metric-text-wrap">
+              <div class="metric-val" id="statAutomatedCount">0</div>
+              <div class="metric-lbl">Automated Auto-Replies</div>
+              <div class="metric-sub-pill pill-subtle">System Acks & Statuses</div>
+            </div>
+          </div>
+
+          <div class="inbox-metric-card metric-disabled">
+            <div class="metric-icon-wrap icon-shield">🛡️</div>
+            <div class="metric-text-wrap">
+              <div class="metric-val" id="statBouncesFiltered">0</div>
+              <div class="metric-lbl">Bounces & Failures Blocked</div>
+              <div class="metric-sub-pill pill-safe">Zero Inbox Clutter</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Responses Content Section -->
+      <section class="panel inbox-content-panel">
+        <!-- Filter Toolbar -->
+        <div class="inbox-toolbar">
+          <div class="inbox-nav-tabs">
+            <button type="button" class="inbox-tab-nav active" id="tabNavGenuine">
+              🎯 Genuine Only (<span id="countBadgeGenuine">0</span>)
+            </button>
+            <button type="button" class="inbox-tab-nav" id="tabModeSideBySide">
+              ☷ All 4 Inboxes Side-by-Side
+            </button>
+            <button type="button" class="inbox-tab-nav" id="tabNavAutomated">
+              🤖 Auto-Replies Only (<span id="countBadgeAutomated">0</span>)
+            </button>
+          </div>
+          <div class="inbox-search-wrap">
+            <input type="text" id="inboxSearchInput" placeholder="🔍 Filter all 4 inboxes by company, recruiter name, or keywords...">
+          </div>
+        </div>
+
+        <!-- 4-COLUMN SIDE-BY-SIDE GRID VIEW (DEFAULT) -->
+        <div id="sideBySideColumnsContainer" class="inbox-multi-columns-grid">
+          <!-- Column 1: Sender 1 -->
+          <div class="inbox-account-column" id="colAccount1">
+            <div class="inbox-column-header">
+              <div class="inbox-column-header-top">
+                <span class="inbox-column-title">
+                  <span class="pill-badge-dot dot-acc1"></span>
+                  Sender 1
+                </span>
+                <span class="badge-account-pill acc-tiwari">Sender 1</span>
+              </div>
+              <div class="inbox-column-stats-row">
+                <div class="col-stats-left">
+                  <span class="col-stat-pill pill-gen">🎯 <strong id="colGenCount1">0</strong> Genuine</span>
+                  <span class="col-stat-pill pill-auto">🤖 <strong id="colAutoCount1">0</strong> Auto</span>
+                </div>
+                <div class="col-stepper" id="colStepper1">
+                  <span class="col-stepper-info" id="colStepperInfo1">1–5 of 0</span>
+                  <div class="col-stepper-btns">
+                    <button type="button" class="btn-step" id="colPrevBtn1" title="Previous page">◀</button>
+                    <button type="button" class="btn-step" id="colNextBtn1" title="Next page">▶</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="inbox-column-cards" id="colCards1">
+              <div class="inbox-loading-placeholder">Loading responses...</div>
+            </div>
+          </div>
+
+          <!-- Column 2: Sender 2 -->
+          <div class="inbox-account-column" id="colAccount2">
+            <div class="inbox-column-header">
+              <div class="inbox-column-header-top">
+                <span class="inbox-column-title">
+                  <span class="pill-badge-dot dot-acc2"></span>
+                  Sender 2
+                </span>
+                <span class="badge-account-pill acc-creative">Sender 2</span>
+              </div>
+              <div class="inbox-column-stats-row">
+                <div class="col-stats-left">
+                  <span class="col-stat-pill pill-gen">🎯 <strong id="colGenCount2">0</strong> Genuine</span>
+                  <span class="col-stat-pill pill-auto">🤖 <strong id="colAutoCount2">0</strong> Auto</span>
+                </div>
+                <div class="col-stepper" id="colStepper2">
+                  <span class="col-stepper-info" id="colStepperInfo2">1–5 of 0</span>
+                  <div class="col-stepper-btns">
+                    <button type="button" class="btn-step" id="colPrevBtn2" title="Previous page">◀</button>
+                    <button type="button" class="btn-step" id="colNextBtn2" title="Next page">▶</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="inbox-column-cards" id="colCards2">
+              <div class="inbox-loading-placeholder">Loading responses...</div>
+            </div>
+          </div>
+
+          <!-- Column 3: Sender 3 -->
+          <div class="inbox-account-column" id="colAccount3">
+            <div class="inbox-column-header">
+              <div class="inbox-column-header-top">
+                <span class="inbox-column-title">
+                  <span class="pill-badge-dot dot-acc3"></span>
+                  Sender 3
+                </span>
+                <span class="badge-account-pill acc-devil">Sender 3</span>
+              </div>
+              <div class="inbox-column-stats-row">
+                <div class="col-stats-left">
+                  <span class="col-stat-pill pill-gen">🎯 <strong id="colGenCount3">0</strong> Genuine</span>
+                  <span class="col-stat-pill pill-auto">🤖 <strong id="colAutoCount3">0</strong> Auto</span>
+                </div>
+                <div class="col-stepper" id="colStepper3">
+                  <span class="col-stepper-info" id="colStepperInfo3">1–5 of 0</span>
+                  <div class="col-stepper-btns">
+                    <button type="button" class="btn-step" id="colPrevBtn3" title="Previous page">◀</button>
+                    <button type="button" class="btn-step" id="colNextBtn3" title="Next page">▶</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="inbox-column-cards" id="colCards3">
+              <div class="inbox-loading-placeholder">Loading responses...</div>
+            </div>
+          </div>
+
+          <!-- Column 4: Sender 4 -->
+          <div class="inbox-account-column" id="colAccount4">
+            <div class="inbox-column-header">
+              <div class="inbox-column-header-top">
+                <span class="inbox-column-title">
+                  <span class="pill-badge-dot dot-acc4"></span>
+                  Sender 4
+                </span>
+                <span class="badge-account-pill acc-ketan181">Sender 4</span>
+              </div>
+              <div class="inbox-column-stats-row">
+                <div class="col-stats-left">
+                  <span class="col-stat-pill pill-gen">🎯 <strong id="colGenCount4">0</strong> Genuine</span>
+                  <span class="col-stat-pill pill-auto">🤖 <strong id="colAutoCount4">0</strong> Auto</span>
+                </div>
+                <div class="col-stepper" id="colStepper4">
+                  <span class="col-stepper-info" id="colStepperInfo4">1–5 of 0</span>
+                  <div class="col-stepper-btns">
+                    <button type="button" class="btn-step" id="colPrevBtn4" title="Previous page">◀</button>
+                    <button type="button" class="btn-step" id="colNextBtn4" title="Next page">▶</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="inbox-column-cards" id="colCards4">
+              <div class="inbox-loading-placeholder">Loading responses...</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ACTIVE EMAIL LIVE READER DECK (Instant view on card click - Zero scroll needed) -->
+        <div id="inboxActiveReaderPane" class="inbox-reader-pane hidden">
+          <div class="reader-pane-header">
+            <div class="reader-header-left">
+              <span class="reader-pulse-dot"></span>
+              <span class="reader-account-badge" id="readerAccountBadge">📬 Sender Account</span>
+              <span class="reader-category-pill" id="readerCategoryPill">🎯 Genuine HR</span>
+              <span class="reader-priority-pill" id="readerPriorityPill">HIGH</span>
+            </div>
+            <div class="reader-header-right">
+              <span class="reader-date" id="readerDate">9 Oct, 09:31 pm</span>
+              <button type="button" class="btn-micro" id="closeReaderPaneBtn">✕ Close Reader</button>
+            </div>
+          </div>
+          <div class="reader-meta-box">
+            <div class="reader-company-line">
+              <strong id="readerCompany">Company Name</strong>
+              <span id="readerSender">• Recruiter Name &lt;recruiter@company.com&gt;</span>
+            </div>
+            <div class="reader-subject-line">
+              <span class="reader-subj-label">Subject:</span>
+              <span id="readerSubject">Application Subject</span>
+            </div>
+          </div>
+          <div class="reader-body-container">
+            <div id="readerBodyText" class="reader-body-text">Loading message content...</div>
+          </div>
+          <div class="reader-actions-bar">
+            <a href="#" target="_blank" class="btn-primary btn-reader-reply" id="readerReplyGmailBtn">📨 Reply in Gmail ↗</a>
+            <button type="button" class="btn-tiny btn-subtle" id="readerCopyEmailBtn">📋 Copy Recruiter Email</button>
+            <button type="button" class="btn-tiny btn-subtle" id="readerCopySubjectBtn">📋 Copy Subject</button>
+          </div>
+        </div>
+
+        <!-- SINGLE LIST VIEW CONTAINER (PAGINATED) -->
+        <div id="singleListViewContainer" class="hidden">
+          <!-- Pagination Controls Bar (Top) -->
+          <div class="inbox-pagination-bar" id="inboxPaginationTop">
+            <div class="pagination-info">
+              <span>Showing <strong id="pageRangeStart">0</strong>–<strong id="pageRangeEnd">0</strong> of <strong id="pageTotalCount">0</strong> responses</span>
+              <span class="pagination-sub">(Page-by-page • Zero stuck scroll)</span>
+            </div>
+            <div class="pagination-controls">
+              <button type="button" class="page-nav-btn" id="prevPageBtn" disabled>◀ Prev</button>
+              <div class="page-pills" id="pagePillsTop"></div>
+              <button type="button" class="page-nav-btn" id="nextPageBtn" disabled>Next ▶</button>
+            </div>
+            <div class="page-size-selector">
+              <label for="pageSizeSelect">Cards/page:</label>
+              <select id="pageSizeSelect" class="page-select-input">
+                <option value="6">6 (Fits On Screen)</option>
+                <option value="10" selected>10 cards</option>
+                <option value="15">15 cards</option>
+                <option value="25">25 cards</option>
+                <option value="all">All</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Section 1: Genuine HR Responses List -->
+          <div id="genuineResponsesList" class="responses-list-container">
+            <div class="inbox-loading-placeholder">Loading recruiter responses from inbox...</div>
+          </div>
+
+          <!-- Section 2: Automated Responses List -->
+          <div id="automatedResponsesList" class="responses-list-container hidden">
+            <div class="inbox-loading-placeholder">Loading automated responses...</div>
+          </div>
+
+          <!-- Pagination Controls Bar (Bottom) -->
+          <div class="inbox-pagination-bar inbox-pagination-footer" id="inboxPaginationBottom">
+            <div class="pagination-info">
+              <span>Page <strong id="footerCurrentPage">1</strong> of <strong id="footerTotalPages">1</strong></span>
+            </div>
+            <div class="pagination-controls">
+              <button type="button" class="page-nav-btn" id="footerPrevPageBtn" disabled>◀ Prev</button>
+              <div class="page-pills" id="pagePillsBottom"></div>
+              <button type="button" class="page-nav-btn" id="footerNextPageBtn" disabled>Next ▶</button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- 🧹 INBOX GHOST & BOUNCE PURGE VIEW (Clean "Address Not Found" / Mail Subsystem) -->
+    <div id="bouncesView" class="bounces-view hidden">
+      <div class="bounces-view-container">
+        <!-- Top Hero / Stats Banner -->
+        <div class="bounces-hero-card">
+          <div class="bounces-hero-header">
+            <div class="bounces-hero-title-group">
+              <div class="bounces-badge">
+                <span class="pulse-dot-red"></span>
+                <span>AUTONOMOUS GMAIL NDR PURGE</span>
+              </div>
+              <h2>Inbox Ghost & Bidirectional Sent Cleaner</h2>
+              <p class="bounces-desc">
+                Permanently sweeps out <strong>"Address not found"</strong>, <strong>"Mail Delivery Subsystem"</strong>, dead domains, and <strong>550 User Unknown</strong> rejection notices from your INBOX <strong>AND</strong> removes original outgoing emails from Gmail Sent Mail. Zero "This reply to this message was deleted" threads left in your Gmail!
+              </p>
+            </div>
+            <div class="bounces-actions-wrap">
+              <button type="button" class="btn-clean-subtle" id="rescanBouncesBtn">
+                <span id="rescanBouncesBtnText">🔄 Rescan Inboxes</span>
+              </button>
+              <button type="button" class="btn-clean-subtle" id="sweepSentBouncesBtn" title="Sweep and purge all historical failed sent emails from Gmail Sent folder">
+                <span id="sweepSentBtnText">🧹 Clean Sent Mail</span>
+              </button>
+              <button type="button" class="btn-clean-danger" id="openPurgeModalBtn">
+                <span id="purgeAllBtnText">🧹 Purge Confirmed Bounces</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Strict Safety & Exclusion Guarantee Banner -->
+          <div class="bounces-safety-banner">
+            <div class="safety-banner-item">
+              <div class="safety-banner-icon-box">🛡️</div>
+              <div class="safety-banner-text">
+                <strong>Recruiter Replies 100% Protected</strong>
+                <span>All genuine HR responses, interview invites, and ATS confirmations (Greenhouse, Lever, Workday) are strictly isolated and never touched.</span>
+              </div>
+            </div>
+            <div class="safety-banner-item">
+              <div class="safety-banner-icon-box">🔄</div>
+              <div class="safety-banner-text">
+                <strong>Bidirectional Gmail Cleaning</strong>
+                <span>Moves NDRs from Inbox to Trash AND removes matching sent emails from Gmail Sent folder so no ghost threads remain.</span>
+              </div>
+            </div>
+            <div class="safety-banner-item">
+              <div class="safety-banner-icon-box">⚡</div>
+              <div class="safety-banner-text">
+                <strong>Autonomous 5-Min Sweeper</strong>
+                <span>Runs quietly in the background during 12-15m breaks and every 5 minutes with zero manual intervention needed.</span>
+              </div>
+            </div>
+            <div class="safety-banner-item">
+              <div class="safety-banner-icon-box">🚫</div>
+              <div class="safety-banner-text">
+                <strong>Permanent Database Lock</strong>
+                <span>Dead domains and failed emails remain stored in local records (sent_log) to guarantee zero repeated outreach.</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Target Sender Account Selector -->
+          <div class="bounces-account-bar">
+            <span class="account-pill-label">Sender Account:</span>
+            <div class="account-pills-group" id="bouncesAccountPills">
+              <button type="button" class="account-pill-btn active" data-account="account1">
+                <span class="pill-badge-dot dot-acc1"></span>
+                <span class="pill-text">Sender 1</span>
+                <span class="pill-counter" id="bounceCountPillAcc1">...</span>
+              </button>
+              <button type="button" class="account-pill-btn" data-account="account2">
+                <span class="pill-badge-dot dot-acc2"></span>
+                <span class="pill-text">Sender 2</span>
+                <span class="pill-counter" id="bounceCountPillAcc2">...</span>
+              </button>
+              <button type="button" class="account-pill-btn" data-account="account3">
+                <span class="pill-badge-dot dot-acc3"></span>
+                <span class="pill-text">Sender 3</span>
+                <span class="pill-counter" id="bounceCountPillAcc3">...</span>
+              </button>
+              <button type="button" class="account-pill-btn" data-account="account4">
+                <span class="pill-badge-dot dot-acc4"></span>
+                <span class="pill-text">Sender 4</span>
+                <span class="pill-counter" id="bounceCountPillAcc4">...</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Real-Time Indication Callout ("Bro, I'm deleting it") -->
+          <div class="bounces-indication-callout" id="bouncesIndicationBox">
+            <div class="callout-icon" id="bouncesIndicationIcon">📢</div>
+            <div class="callout-content">
+              <h4 id="bouncesIndicationTitle">Status Indication: Scanner Ready</h4>
+              <p id="bouncesIndicationText">Monitoring delivery failure messages across all 4 Gmail inboxes...</p>
+            </div>
+            <div class="callout-badge" id="bouncesIndicationBadge">ACTIVE</div>
+          </div>
+
+          <!-- Metrics Grid -->
+          <div class="bounces-metrics-grid">
+            <div class="bounces-metric-card metric-danger" id="metricCardClearDelete">
+              <div class="metric-icon-wrap icon-danger">🔴</div>
+              <div class="metric-text-wrap">
+                <div class="metric-val" id="statBouncesClearCount">0</div>
+                <div class="metric-lbl">Clear to Delete</div>
+                <div class="metric-sub-pill pill-danger">Address Not Found / 550</div>
+              </div>
+            </div>
+
+            <div class="bounces-metric-card metric-warning" id="metricCardDoubtReview">
+              <div class="metric-icon-wrap icon-warning">⚠️</div>
+              <div class="metric-text-wrap">
+                <div class="metric-val" id="statBouncesDoubtCount">0</div>
+                <div class="metric-lbl">Review Needed</div>
+                <div class="metric-sub-pill pill-warning">Ambiguous / Doubtful</div>
+              </div>
+            </div>
+
+            <div class="bounces-metric-card metric-safe">
+              <div class="metric-icon-wrap icon-safe">🛡️</div>
+              <div class="metric-text-wrap">
+                <div class="metric-val" id="statBouncesProtectedCount">100%</div>
+                <div class="metric-lbl">Recruiter Replies Safe</div>
+                <div class="metric-sub-pill pill-safe">Zero Touched</div>
+              </div>
+            </div>
+
+            <div class="bounces-metric-card metric-info">
+              <div class="metric-icon-wrap icon-info">🗑️</div>
+              <div class="metric-text-wrap">
+                <div class="metric-val" id="statBouncesTotalPurged">0</div>
+                <div class="metric-lbl">Total Purged to Date</div>
+                <div class="metric-sub-pill pill-info" id="statBouncesBreakdown">Inbox + Sent Mails Moved to Trash</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Bounces List Content Section -->
+        <div class="bounces-main-card">
+          <div class="bounces-toolbar">
+            <div class="bounces-nav-tabs">
+              <button type="button" class="bounces-tab-nav active" id="tabBounceClear">
+                🔴 Clear to Delete (<span id="tabCountClear">0</span>)
+              </button>
+              <button type="button" class="bounces-tab-nav" id="tabBounceDoubt">
+                ⚠️ Review Needed (<span id="tabCountDoubt">0</span>)
+              </button>
+              <button type="button" class="bounces-tab-nav" id="tabBounceHistory">
+                📋 Purge Audit History (<span id="tabCountHistory">0</span>)
+              </button>
+            </div>
+            <div class="bounces-toolbar-right">
+              <button type="button" class="btn-micro-action hidden" id="clearAuditHistoryBtn" title="Clear this audit history log">
+                🗑️ Clear History Log
+              </button>
+              <button type="button" class="btn-micro-action btn-micro-danger hidden" id="emptyTrashBtn" title="Permanently empty Gmail Trash folder">
+                🔥 Empty Gmail Trash
+              </button>
+              <div class="bounces-search-wrap">
+                <span class="search-icon-inline">🔍</span>
+                <input type="text" id="bouncesSearchInput" placeholder="Filter by failed email, domain, or reason...">
+              </div>
+            </div>
+          </div>
+
+          <!-- List 1: Clear to Delete Cards -->
+          <div id="bouncesClearList" class="bounces-cards-list">
+            <div class="inbox-loading-placeholder">Scanning inbox for "Address not found" bounce messages...</div>
+          </div>
+
+          <!-- List 2: Doubtful Cards -->
+          <div id="bouncesDoubtList" class="bounces-cards-list hidden">
+            <div class="bounces-empty-notice">
+              <span class="empty-icon">✅</span>
+              <h4>Zero Ambiguous Messages</h4>
+              <p>All scanned failures strictly match official Mail Delivery Subsystem / Postmaster records.</p>
+            </div>
+          </div>
+
+          <!-- List 3: Audit History -->
+          <div id="bouncesHistoryList" class="bounces-cards-list hidden">
+            <div class="bounces-empty-notice">No purge history recorded yet.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Purge Bounces Confirmation Prompt -->
+  <div id="bouncePurgeModal" class="modal-overlay hidden">
+    <div class="modal-dialog bounce-modal-dialog">
+      <div class="modal-header">
+        <div class="modal-icon icon-danger">🧹</div>
+        <div>
+          <h3>Confirm Moving Bounced Emails to Trash</h3>
+          <p class="modal-subtitle" id="purgeModalSubtitle">Move detected "Address not found" emails from INBOX to Gmail Bin/Trash.</p>
+        </div>
+        <button type="button" class="modal-close-btn" id="closeBouncePurgeModalBtn">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="purge-indication-banner">
+          <span class="purge-banner-icon">📢</span>
+          <div class="purge-banner-text">
+            <strong id="purgeModalIndicationTitle">"Bro, I'm deleting bounce emails!"</strong>
+            <p id="purgeModalIndicationSub">These emails will be moved directly from INBOX to <code id="purgeTrashFolderLabel">[Gmail]/Bin</code>.</p>
+          </div>
+        </div>
+
+        <div class="purge-checklist">
+          <div class="check-item">
+            <span class="check-icon">✅</span>
+            <span><strong>Target:</strong> Only emails from <code>mailer-daemon</code> / <code>postmaster</code> with "Address not found", "550 5.1.1", or dead domain errors.</span>
+          </div>
+          <div class="check-item">
+            <span class="check-icon">🔄</span>
+            <span><strong>Bidirectional Purge:</strong> Both the bounce notices in INBOX and the original outgoing emails in Gmail Sent Mail (<code>[Gmail]/Sent Mail</code>) are moved to Trash, removing "This reply was deleted" threads.</span>
+          </div>
+          <div class="check-item">
+            <span class="check-icon">🛡️</span>
+            <span><strong>Strict Safety:</strong> Real recruiter responses, ATS receipts, and human emails are 100% UNTOUCHED.</span>
+          </div>
+          <div class="check-item">
+            <span class="check-icon">🚫</span>
+            <span><strong>Auto-Suppression:</strong> Failed email addresses are permanently added to suppression blacklist and database to prevent future outreach.</span>
+          </div>
+        </div>
+
+        <div class="purge-progress-box hidden" id="purgeProgressBox">
+          <div class="purge-progress-label">
+            <span id="purgeProgressText">Moving messages to Trash via IMAP...</span>
+            <strong id="purgeProgressPercent">0%</strong>
+          </div>
+          <div class="progress-bar-track">
+            <div class="progress-bar-fill fill-danger" id="purgeProgressBarFill" style="width: 0%;"></div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-subtle" id="cancelBouncePurgeBtn">Cancel & Keep</button>
+        <button type="button" class="btn-primary btn-danger-action" id="confirmBouncePurgeBtn">
+          <span id="confirmBouncePurgeBtnText">Yes, Clean My Inbox Now ➔</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: View Full Bounce Error Snippet -->
+  <div id="bounceSnippetModal" class="modal-overlay hidden">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <div class="modal-icon icon-danger">📄</div>
+        <div>
+          <h3 id="snippetModalTitle">Delivery Status Notification</h3>
+          <p class="modal-subtitle" id="snippetModalSub">Raw NDR diagnostics transcript</p>
+        </div>
+        <button type="button" class="modal-close-btn" id="closeBounceSnippetModalBtn">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="snippet-modal-meta">
+          <div><strong>Failed Recipient:</strong> <span id="snippetModalRecipient">recipient@company.com</span></div>
+          <div><strong>Reason:</strong> <span id="snippetModalReason" class="badge-tag-pill pill-danger">550 5.1.1</span></div>
+          <div><strong>Date:</strong> <span id="snippetModalDate">Mon, 12 Oct 2026</span></div>
+        </div>
+        <pre class="snippet-modal-body" id="snippetModalBodyText"></pre>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-subtle" id="dismissSnippetModalBtn">Close</button>
+        <button type="button" class="btn-primary btn-danger-action" id="deleteFromSnippetModalBtn">🗑️ Delete This Bounce to Trash</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal to View Full Recruiter Message -->
+  <div id="inboxDetailModal" class="modal-overlay hidden">
+    <div class="modal-dialog inbox-modal-dialog">
+      <div class="modal-header">
+        <div class="inbox-modal-title-wrap">
+          <div class="inbox-modal-badges">
+            <span class="badge-tag-pill" id="modalTagPill">🎯 Interview / Assessment</span>
+            <span class="badge-priority-pill" id="modalPriorityPill">HIGH</span>
+            <span class="badge-account-pill" id="modalAccountPill">📬 Sender Account</span>
+          </div>
+          <h3 id="modalSubject">Application Subject</h3>
+          <div class="inbox-modal-meta">
+            <strong id="modalCompany">Company Name</strong> • 
+            <span id="modalSender">Recruiter Name &lt;email&gt;</span> • 
+            <span id="modalDate">Date</span>
+          </div>
+        </div>
+        <button type="button" class="modal-close-btn" id="closeInboxModalBtn">✕</button>
+      </div>
+      <div class="modal-body inbox-modal-body">
+        <div class="inbox-message-box" id="modalMessageContent">
+          Message body content...
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-subtle" id="modalCopyEmailBtn">📋 Copy HR Email</button>
+        <a href="#" target="_blank" class="btn-primary" id="modalOpenGmailBtn">📨 Open Thread in Gmail ↗</a>
+      </div>
+    </div>
   </div>
 
   <!-- Modular Post-Campaign Cleanup Modal ("Sir, would you like to remove it?") -->

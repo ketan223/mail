@@ -1,0 +1,102 @@
+[
+  {
+    "company": "Apptunix",
+    "domain": "apptunix.com",
+    "type": "Remote"
+  },
+  {
+    "company": "Appy Pie",
+    "domain": "appypie.com",
+    "type": "Remote"
+  },
+  {
+    "company": "Sparx IT",
+    "domain": "sparxitsolutions.com",
+    "type": "Remote"
+  },
+  {
+    "company": "Mobulous",
+    "domain": "mobulous.com",
+    "type": "Remote"
+  },
+  {
+    "company": "Yugasa Software",
+    "domain": "yugasa.com",
+    "type": "Remote"
+  },
+  {
+    "company": "Parangat Technologies",
+    "domain": "parangat.com",
+    "type": "Remote"
+  },
+  {
+    "company": "Xebia India",
+    "domain": "xebia.com",
+    "type": "Remote"
+  },
+  {
+    "company": "Publicis Sapient India",
+    "domain": "publicissapient.com",
+    "type": "Remote"
+  },
+  {
+    "company": "Globant India",
+    "domain": "globant.com",
+    "type": "Pune"
+  },
+  {
+    "company": "Endava India",
+    "domain": "endava.com",
+    "type": "Pune"
+  },
+  {
+    "company": "Indegene",
+    "domain": "indegene.com",
+    "type": "Remote"
+  },
+  {
+    "company": "Zifo RnD Solutions",
+    "domain": "zifo.com",
+    "type": "Remote"
+  },
+  {
+    "company": "Navitas Life Sciences",
+    "domain": "navitaslifesciences.com",
+    "type": "Remote"
+  },
+  {
+    "company": "Netrika Consulting",
+    "domain": "netrika.com",
+    "type": "Mumbai"
+  },
+  {
+    "company": "Rubicon Research",
+    "domain": "rubicon.co.in",
+    "type": "Mumbai"
+  },
+  {
+    "company": "Sula Vineyards Tech",
+    "domain": "sulavineyards.com",
+    "type": "Mumbai"
+  },
+  {
+    "company": "Glenmark Tech",
+    "domain": "glenmarkpharma.com",
+    "type": "Mumbai"
+  },
+  {
+    "company": "Lupin Digital Health",
+    "domain": "lupindigitalhealth.com",
+    "type": "Mumbai"
+  },
+  {
+    "company": "Cipla Digital",
+    "domain": "cipla.com",
+    "type": "Mumbai"
+  },
+  {
+    "company": "Godrej Infotech",
+    "domain": "godrejinfotech.com",
+    "type": "Mumbai"
+  }
+]

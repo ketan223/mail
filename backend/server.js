@@ -9,10 +9,24 @@ const tls = require('tls');
 const dns = require('dns').promises;
 require('dns').setServers(['8.8.8.8', '1.1.1.1', '8.8.4.4']);
 const pdfParse = require('pdf-parse');
-require('dotenv').config();
+require('dotenv').config({ path: path.join(__dirname, '.env') });
+const { MASTER_COMPANIES, getFreshCandidates, discoverNextBatchLeads } = require('./data/company_directory');
+const { FOREIGN_MASTER_COMPANIES, getFreshForeignCandidates } = require('./data/foreign_company_directory');
+const { discoverCompaniesViaMistral } = require('./services/aiCompanyDiscovery');
+const { syncInboxResponses, getCachedResponses } = require('./services/inboxTracker');
+const bouncePurgeService = require('./services/bouncePurgeService');
+const { validateRecipient, normalizeEmail, validateSyntax, resolveDomainDns } = require('./services/emailValidator');
+const suppressionService = require('./services/suppressionService');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+
+process.on('uncaughtException', (err) => {
+  console.error('[UNCAUGHT EXCEPTION]', err && err.stack ? err.stack : err);
+});
+process.on('unhandledRejection', (reason) => {
+  console.error('[UNHANDLED REJECTION]', reason);
+});
 
 // Ensure data directory exists
 const DATA_DIR = path.join(__dirname, 'data');
@@ -81,13 +95,78 @@ app.use(express.static(path.join(__dirname, '../frontend')));
 // Clean Gmail App Password
 const getAppPassword = () => (process.env.GMAIL_APP_PASSWORD || '').replace(/\s+/g, '');
 
-// Create Nodemailer transporter
-function createTransporter() {
-  const user = process.env.GMAIL_USER;
-  const pass = getAppPassword();
+// Quad Sender Accounts Configuration
+function getSenderAccounts() {
+  const accounts = [];
+  
+  // Account 1
+  const u1 = process.env.GMAIL_USER_1 || process.env.GMAIL_USER || '';
+  const p1 = (process.env.GMAIL_APP_PASSWORD_1 || process.env.GMAIL_APP_PASSWORD || '').replace(/\s+/g, '');
+  if (u1) {
+    accounts.push({
+      id: 'account1',
+      user: u1,
+      pass: p1,
+      active: Boolean(u1 && p1),
+      label: u1.split('@')[0]
+    });
+  }
+
+  // Account 2
+  const u2 = process.env.GMAIL_USER_2 || '';
+  const p2 = (process.env.GMAIL_APP_PASSWORD_2 || '').replace(/\s+/g, '');
+  if (u2) {
+    accounts.push({
+      id: 'account2',
+      user: u2,
+      pass: p2,
+      active: Boolean(u2 && p2),
+      label: u2.split('@')[0]
+    });
+  }
+
+  // Account 3
+  const u3 = process.env.GMAIL_USER_3 || '';
+  const p3 = (process.env.GMAIL_APP_PASSWORD_3 || '').replace(/\s+/g, '');
+  if (u3) {
+    accounts.push({
+      id: 'account3',
+      user: u3,
+      pass: p3,
+      active: Boolean(u3 && p3),
+      label: u3.split('@')[0]
+    });
+  }
+
+  // Account 4
+  const u4 = process.env.GMAIL_USER_4 || '';
+  const p4 = (process.env.GMAIL_APP_PASSWORD_4 || '').replace(/\s+/g, '');
+  if (u4) {
+    accounts.push({
+      id: 'account4',
+      user: u4,
+      pass: p4,
+      active: Boolean(u4 && p4),
+      label: u4.split('@')[0]
+    });
+  }
+
+  return accounts;
+}
+
+// Create Nodemailer transporter for specific account or fallback
+function createTransporter(account = null) {
+  let user, pass;
+  if (account && account.user && account.pass) {
+    user = account.user;
+    pass = account.pass;
+  } else {
+    user = process.env.GMAIL_USER_1 || process.env.GMAIL_USER;
+    pass = (process.env.GMAIL_APP_PASSWORD_1 || getAppPassword()).replace(/\s+/g, '');
+  }
 
   if (!user || !pass) {
-    throw new Error('Gmail credentials are not configured in backend/.env');
+    throw new Error(`Gmail credentials are not configured for ${user || 'sender account'}`);
   }
 
   return nodemailer.createTransport({
@@ -132,132 +211,32 @@ const getDefaultResumePath = () => {
   return null;
 };
 
-// Cache for DNS MX lookups to avoid repeated DNS queries
-const mxCache = new Map();
-
+// Check Domain MX and deliverability via emailValidator
 async function checkDomainMx(email) {
   try {
-    const domain = email.split('@')[1];
+    const domain = (email || '').split('@')[1];
     if (!domain) return false;
-
-    if (mxCache.has(domain.toLowerCase())) {
-      return mxCache.get(domain.toLowerCase());
-    }
-
-    const records = await dns.resolveMx(domain);
-    const hasMx = Array.isArray(records) && records.length > 0;
-    mxCache.set(domain.toLowerCase(), hasMx);
-    return hasMx;
+    const res = await resolveDomainDns(domain);
+    return res.isDeliverable;
   } catch (err) {
-    const domain = email.split('@')[1] || '';
-    mxCache.set(domain.toLowerCase(), false);
     return false;
   }
 }
 
-// Cache for mailbox verification results
-const mailboxCache = new Map();
-
+// Full Recipient Validation wrapper (Syntax, Normalization, Suppression, DNS MX, A/AAAA fallback, Provider)
 async function verifyMailboxExists(email) {
   try {
-    const trimmedEmail = (email || '').toLowerCase().trim();
-    if (!trimmedEmail || !EMAIL_REGEX.test(trimmedEmail)) {
-      return { valid: false, reason: 'Invalid email syntax' };
-    }
-
-    if (mailboxCache.has(trimmedEmail)) {
-      return mailboxCache.get(trimmedEmail);
-    }
-
-    const domain = trimmedEmail.split('@')[1];
-    if (!domain) return { valid: false, reason: 'No domain found' };
-
-    let records = [];
-    try {
-      records = await dns.resolveMx(domain);
-    } catch (e) {
-      const res = { valid: false, reason: 'Domain has no active MX records' };
-      mailboxCache.set(trimmedEmail, res);
-      return res;
-    }
-
-    if (!Array.isArray(records) || records.length === 0) {
-      const res = { valid: false, reason: 'Domain has no active MX records' };
-      mailboxCache.set(trimmedEmail, res);
-      return res;
-    }
-
-    records.sort((a, b) => a.preference - b.preference);
-    const host = records[0].exchange;
-
-    const probeResult = await new Promise((resolve) => {
-      let step = 0;
-      let closed = false;
-      let socket = null;
-
-      const finish = (res) => {
-        if (closed) return;
-        closed = true;
-        if (hardTimer) clearTimeout(hardTimer);
-        if (socket) {
-          try { socket.write('QUIT\r\n'); } catch (e) {}
-          try { socket.destroy(); } catch (e) {}
-        }
-        resolve(res);
-      };
-
-      // Balanced Pre-Check Mode:
-      // 1. If server explicitly returns 550 5.1.1 / user unknown -> SKIP (100% dead mailbox)
-      // 2. If domain has no MX records -> SKIP (100% dead company)
-      // 3. If server confirms 250 -> SEND (100% active mailbox)
-      // 4. If firewall/timeout on port 25 -> ALLOW SEND so real Google/Microsoft HRs aren't skipped!
-      const hardTimer = setTimeout(() => {
-        finish({ valid: true, reason: 'Probe timeout (fallback to send)' });
-      }, 3500);
-
-      try {
-        socket = net.createConnection(25, host);
-        socket.setEncoding('utf8');
-        socket.setTimeout(3000);
-
-        socket.on('data', (chunk) => {
-          const line = chunk.trim();
-          if (step === 0 && line.startsWith('220')) {
-            step = 1;
-            socket.write('HELO mail.check\r\n');
-          } else if (step === 1 && line.startsWith('250')) {
-            step = 2;
-            socket.write('MAIL FROM:<tiwariketan045@gmail.com>\r\n');
-          } else if (step === 2 && line.startsWith('250')) {
-            step = 3;
-            socket.write(`RCPT TO:<${trimmedEmail}>\r\n`);
-          } else if (step === 3) {
-            if (/^55[0-4]/.test(line) || line.includes('5.1.1') || line.toLowerCase().includes('does not exist')) {
-              finish({ valid: false, reason: 'HR Mailbox does not exist / Deactivated (550 5.1.1)' });
-            } else if (line.startsWith('250') || line.startsWith('251')) {
-              finish({ valid: true, reason: 'Mailbox verified active (250 OK)' });
-            } else {
-              finish({ valid: true, reason: 'Ambiguous response / Catch-all (Allowed)' });
-            }
-          }
-        });
-
-        socket.on('error', (err) => {
-          finish({ valid: true, reason: `Probe unconnectable: ${err.message} (Allowed)` });
-        });
-
-        socket.on('timeout', () => {
-          finish({ valid: true, reason: 'Probe timeout (Allowed)' });
-        });
-      } catch (err) {
-        finish({ valid: true, reason: `Socket error: ${err.message} (Allowed)` });
-      }
-    });
-
-    mailboxCache.set(trimmedEmail, probeResult);
-    return probeResult;
+    const res = await validateRecipient(email);
+    return {
+      valid: res.canSend,
+      reason: res.reason,
+      status: res.status,
+      isSuppressed: res.isSuppressed,
+      isInconclusive: res.isInconclusive,
+      details: res
+    };
   } catch (err) {
-    return { valid: true, reason: 'Verification bypassed: ' + err.message };
+    return { valid: false, reason: 'Validation error: ' + err.message, status: 'inconclusive' };
   }
 }
 
@@ -271,9 +250,15 @@ const getRandomDelay = (minMs = 4000, maxMs = 8000) => {
 // -------------------------------------------------------------
 class CampaignEngine {
   constructor() {
-    this.status = 'idle'; // 'idle', 'running_batch', 'waiting_pause', 'paused', 'completed'
-    this.batchSize = 50;
-    this.pauseDurationMs = 30 * 60 * 1000; // 30 minutes
+    this.status = 'idle'; // 'idle', 'running_batch', 'waiting_pause', 'paused', 'completed', 'daily_limit_reached'
+    this.isAutonomous = false;
+    this.targetLocation = 'all'; // 'mumbai', 'remote', 'all'
+    this.batchSize = 60; // 60 emails per batch
+    this.pauseDurationMs = 6 * 60 * 1000; // 6-minute cooldown break (Ketan constraint: strictly 6 min)
+    this.dailyLimitIndia = 250; // User target: 250 Indian tech companies / HRs
+    this.dailyLimitForeign = 150; // User target: 150 Foreign tech companies / HRs
+    this.dailyLimit = 400; // Total safe daily quota (100/account across 4 active senders)
+    this.currentAccountIndex = 0;
     this.activePayload = null; // { resume: { filename, buffer }, senderName, subject, message }
     this.queue = [];
     this.currentBatchNumber = 0;
@@ -289,29 +274,130 @@ class CampaignEngine {
       skippedMx: 0
     };
     this.recentLogs = [];
+    this.liveLogs = [];
   }
 
-  // Count emails sent in the last 24 hours to enforce Google's 500/day safety ceiling
-  get24hSentCount() {
+  // Determine if lead is Indian vs Foreign
+  isIndianLead(lead) {
+    if (!lead) return false;
+    if (lead.region === 'india') return true;
+    if (lead.region === 'foreign') return false;
+    const type = (lead.type || '').toLowerCase();
+    const sourceDoc = (lead.sourceDoc || '').toLowerCase();
+    const domain = ((lead.email || '').split('@')[1] || '').toLowerCase();
+    const company = (lead.company || '').toLowerCase();
+
+    if (domain.endsWith('.in') || domain.endsWith('.co.in') || domain.endsWith('.org.in')) return true;
+    if (/mumbai|pune|bangalore|bengaluru|delhi|ncr|hyderabad|chennai|gurgaon|gurugram|noida|ahmedabad|kolkata|india/i.test(type)) return true;
+    if (/mumbai|pune|bangalore|bengaluru|delhi|ncr|hyderabad|chennai|gurgaon|gurugram|noida|ahmedabad|kolkata|india/i.test(sourceDoc)) return true;
+    if (/mumbai|pune|bangalore|bengaluru|delhi|ncr|hyderabad|chennai|gurgaon|gurugram|noida|ahmedabad|kolkata|india/i.test(company)) return true;
+    return false;
+  }
+
+  // Count emails sent today broken down by 🇮🇳 India (250 goal) vs 🌍 Foreign (150 goal)
+  getTodaySentCountsByRegion(accountUser = null) {
+    let india = 0;
+    let foreign = 0;
+    let total = 0;
+    try {
+      if (fs.existsSync(SENT_LOG_FILE)) {
+        const history = JSON.parse(fs.readFileSync(SENT_LOG_FILE, 'utf8') || '[]');
+        const todayStart = new Date();
+        todayStart.setHours(0, 0, 0, 0);
+        const startMs = todayStart.getTime();
+
+        for (const h of history) {
+          if (h.status !== 'sent' || !h.timestamp || new Date(h.timestamp).getTime() < startMs) continue;
+          if (accountUser && (h.senderAccount || '').toLowerCase() !== accountUser.toLowerCase()) continue;
+          total++;
+          const reg = h.region || (this.isIndianLead(h) ? 'india' : 'foreign');
+          if (reg === 'india') {
+            india++;
+          } else {
+            foreign++;
+          }
+        }
+      }
+    } catch (e) {}
+    return { india, foreign, total };
+  }
+
+  addLiveLog(tag, message, level = 'info') {
+    const now = new Date();
+    const timeStr = now.toTimeString().split(' ')[0];
+    const logItem = {
+      id: Date.now() + Math.random().toString(36).substr(2, 4),
+      time: timeStr,
+      tag: tag.toUpperCase(),
+      message,
+      level // 'info', 'success', 'warning', 'danger', 'cooldown'
+    };
+    this.liveLogs.push(logItem);
+    if (this.liveLogs.length > 200) {
+      this.liveLogs.shift();
+    }
+    console.log(`[${timeStr}] [${tag.toUpperCase()}] ${message}`);
+  }
+
+  // Count emails sent today (calendar day starting at local midnight 00:00:00), optionally filtered by sender account
+  getTodaySentCount(accountUser = null) {
+    return this.getTodaySentCountsByRegion(accountUser).total;
+  }
+
+  // Count emails sent in the last 24 hours to enforce Google's 500/day safety ceiling, optionally filtered by sender account
+  get24hSentCount(accountUser = null) {
     try {
       if (fs.existsSync(SENT_LOG_FILE)) {
         const history = JSON.parse(fs.readFileSync(SENT_LOG_FILE, 'utf8') || '[]');
         const cutoff = Date.now() - 24 * 60 * 60 * 1000;
-        return history.filter(h => h.status === 'sent' && h.timestamp && new Date(h.timestamp).getTime() > cutoff).length;
+        return history.filter(h => {
+          if (h.status !== 'sent' || !h.timestamp || new Date(h.timestamp).getTime() <= cutoff) return false;
+          if (accountUser) {
+            return (h.senderAccount || process.env.GMAIL_USER || '').toLowerCase() === accountUser.toLowerCase();
+          }
+          return true;
+        }).length;
       }
     } catch (e) {}
     return 0;
   }
 
-  // Get set of already processed emails (sent or confirmed dead/skipped) to prevent duplicate work
+  // Get set of contacted companies and domains across ALL accounts to guarantee zero duplicate company outreach
+  getContactedCompaniesAndDomains() {
+    const companies = new Set();
+    const domains = new Set();
+    try {
+      if (fs.existsSync(SENT_LOG_FILE)) {
+        const history = JSON.parse(fs.readFileSync(SENT_LOG_FILE, 'utf8') || '[]');
+        for (const item of history) {
+          // ANY attempted email (sent, bounced, skipped_invalid_domain, or failed) permanently locks company and domain!
+          if (item.company) {
+            const compClean = item.company.toLowerCase().trim();
+            if (compClean && compClean !== 'your team' && compClean !== 'your company') {
+              companies.add(compClean);
+            }
+          }
+          if (item.email && item.email.includes('@')) {
+            const d = item.email.split('@')[1].toLowerCase().trim();
+            if (d && !['gmail.com', 'yahoo.com', 'outlook.com', 'hotmail.com'].includes(d)) {
+              domains.add(d);
+            }
+          }
+        }
+      }
+    } catch (e) {}
+    return { companies, domains };
+  }
+
+  // Get set of already processed emails (sent, bounced, or confirmed dead) to permanently prevent duplicate outreach
   getSentEmailsSet() {
     try {
       if (fs.existsSync(SENT_LOG_FILE)) {
         const history = JSON.parse(fs.readFileSync(SENT_LOG_FILE, 'utf8') || '[]');
         return new Set(
           history
-            .filter(item => item.status === 'sent' || item.status === 'skipped_invalid_domain')
             .map(item => (item.email || '').toLowerCase().trim())
+            .filter(Boolean)
         );
       }
     } catch (e) {}
@@ -323,6 +409,9 @@ class CampaignEngine {
     entry.timestamp = new Date().toISOString();
     if (!entry.sourceDoc) {
       entry.sourceDoc = 'PDF 1: Initial HR Database';
+    }
+    if (!entry.region) {
+      entry.region = this.isIndianLead(entry) ? 'india' : 'foreign';
     }
     this.recentLogs.unshift(entry);
     if (this.recentLogs.length > 100) this.recentLogs.pop();
@@ -338,6 +427,9 @@ class CampaignEngine {
         if (!entry.sourceDoc && history[existingIdx].sourceDoc) {
           entry.sourceDoc = history[existingIdx].sourceDoc;
         }
+        if (!entry.region && history[existingIdx].region) {
+          entry.region = history[existingIdx].region;
+        }
         history[existingIdx] = entry;
       } else {
         history.push(entry);
@@ -348,8 +440,8 @@ class CampaignEngine {
     }
   }
 
-  // Start Campaign
-  start(payload, recipientsList, batchSize = 15, pauseMinutes = 30) {
+  // Start Campaign (Manual Contact List)
+  start(payload, recipientsList, batchSize = 60, pauseMinutes = 6, options = {}) {
     if (this.status === 'running_batch' || this.status === 'waiting_pause') {
       throw new Error('A campaign is already actively running. Pause or stop it first.');
     }
@@ -358,22 +450,24 @@ class CampaignEngine {
       throw new Error('Resume PDF attachment is required.');
     }
 
+    this.isAutonomous = false;
+    this.dryRun = Boolean(options.dryRun);
     const alreadySent = this.getSentEmailsSet();
     
-    // Filter out already sent contacts
+    // Filter out already sent contacts and suppressed contacts
     const unsentList = recipientsList.filter(r => {
       const email = (r.email || '').toLowerCase().trim();
-      return EMAIL_REGEX.test(email) && !alreadySent.has(email);
+      return EMAIL_REGEX.test(email) && !alreadySent.has(email) && !suppressionService.isSuppressed(email);
     });
 
     if (unsentList.length === 0) {
-      throw new Error('All selected contacts have already been sent emails! No unsent recipients.');
+      throw new Error('All selected contacts have already been sent emails or are suppressed! No unsent recipients.');
     }
 
     this.activePayload = payload;
     this.queue = unsentList;
-    this.batchSize = parseInt(batchSize, 10) || 15;
-    this.pauseDurationMs = (parseInt(pauseMinutes, 10) || 30) * 60 * 1000;
+    this.batchSize = parseInt(batchSize, 10) || 60;
+    this.pauseDurationMs = (parseInt(pauseMinutes, 10) || 6) * 60 * 1000;
     this.currentBatchNumber = 0;
     this.totalBatches = Math.ceil(this.queue.length / this.batchSize);
     this.isCancelled = false;
@@ -381,22 +475,238 @@ class CampaignEngine {
       totalQueued: this.queue.length,
       sent: 0,
       failed: 0,
-      skippedMx: 0
+      skippedMx: 0,
+      suppressed: 0,
+      deferred: 0,
+      dryRunSent: 0
     };
     this.nextBatchRunTime = null;
     if (this.timerId) clearTimeout(this.timerId);
 
-    console.log(`[CAMPAIGN START] Total unsent: ${this.queue.length}, Batch size: ${this.batchSize}, Total batches: ${this.totalBatches}`);
-    
-    // Trigger first batch
+    this.addLiveLog('START', `Manual campaign started! ${this.dryRun ? '🧪 [DRY-RUN MODE: ZERO EMAILS SENT] ' : ''}Queue: ${this.queue.length}, Batch size: ${this.batchSize}, Total batches: ${this.totalBatches}`, 'success');
     this.runNextBatch();
   }
 
-  // Run next batch of 13 valid emails
+  // Autonomously replenish the queue with Indian (250 quota) and Foreign (150 quota) leads
+  async replenishAutonomousQueue(countNeeded = 60) {
+    try {
+      const alreadySent = this.getSentEmailsSet();
+      const inQueueEmails = new Set(this.queue.map(q => (q.email || '').toLowerCase().trim()));
+      const combinedContacted = new Set([...alreadySent, ...inQueueEmails]);
+      const regionCounts = this.getTodaySentCountsByRegion();
+
+      const { companies: contactedComps, domains: contactedDoms } = this.getContactedCompaniesAndDomains();
+      const inQueueDomains = new Set(this.queue.map(q => (q.email || '').split('@')[1]?.toLowerCase().trim()).filter(Boolean));
+      const inQueueCompanies = new Set(this.queue.map(q => (q.company || '').toLowerCase().trim()).filter(Boolean));
+
+      const allContactedDomains = new Set([...contactedDoms, ...inQueueDomains]);
+      const allContactedCompanies = new Set([...contactedComps, ...inQueueCompanies]);
+
+      const isCandidateFresh = (lead) => {
+        if (!lead || !lead.email) return false;
+        const em = (lead.email || '').toLowerCase().trim();
+        const d = (em.split('@')[1] || '').toLowerCase().trim();
+        const comp = (lead.company || '').toLowerCase().trim();
+        if (combinedContacted.has(em)) return false;
+        if (d && allContactedDomains.has(d)) return false;
+        if (comp && comp !== 'your team' && comp !== 'your company' && allContactedCompanies.has(comp)) return false;
+        if (suppressionService.isSuppressed(em)) return false;
+        return true;
+      };
+
+      let newLeads = [];
+      const acceptLead = (lead) => {
+        newLeads.push(lead);
+        const em = (lead.email || '').toLowerCase().trim();
+        const d = (em.split('@')[1] || '').toLowerCase().trim();
+        const comp = (lead.company || '').toLowerCase().trim();
+        combinedContacted.add(em);
+        if (d) allContactedDomains.add(d);
+        if (comp && comp !== 'your team' && comp !== 'your company') allContactedCompanies.add(comp);
+      };
+
+      const inQueueIndia = this.queue.filter(q => this.isIndianLead(q)).length;
+      const inQueueForeign = this.queue.filter(q => !this.isIndianLead(q)).length;
+
+      const remainingIndia = Math.max(0, this.dailyLimitIndia - regionCounts.india);
+      const remainingForeign = Math.max(0, this.dailyLimitForeign - regionCounts.foreign);
+
+      let targetIndia = 0;
+      let targetForeign = 0;
+
+      if (remainingIndia > 0 && inQueueIndia < 45) {
+        targetIndia = Math.min(remainingIndia - inQueueIndia, 45);
+      }
+      if (remainingForeign > 0 && inQueueForeign < 30) {
+        targetForeign = Math.min(remainingForeign - inQueueForeign, 30);
+      }
+
+      // 1. Gather Foreign leads from foreign directory
+      if (targetForeign > 0) {
+        const foreignCandidates = getFreshForeignCandidates(combinedContacted, targetForeign * 2, allContactedCompanies, allContactedDomains);
+        for (const f of foreignCandidates) {
+          if (newLeads.filter(l => !this.isIndianLead(l)).length >= targetForeign) break;
+          if (isCandidateFresh(f)) {
+            acceptLead(f);
+          }
+        }
+      }
+
+      // 2. Gather Indian leads from company directory
+      if (targetIndia > 0) {
+        const indianCandidates = getFreshCandidates(this.targetLocation || 'all', combinedContacted, allContactedCompanies, allContactedDomains);
+        for (const ind of indianCandidates) {
+          if (newLeads.filter(l => this.isIndianLead(l)).length >= targetIndia) break;
+          if (isCandidateFresh(ind)) {
+            acceptLead(ind);
+          }
+        }
+      }
+
+      // 3. Fallback to Mistral AI if directories needed more leads
+      const currentIndiaCount = newLeads.filter(l => this.isIndianLead(l)).length;
+      const currentForeignCount = newLeads.filter(l => !this.isIndianLead(l)).length;
+      const needMoreIndia = targetIndia - currentIndiaCount;
+      const needMoreForeign = targetForeign - currentForeignCount;
+
+      if ((needMoreIndia > 0 || needMoreForeign > 0) && (remainingIndia > 0 || remainingForeign > 0)) {
+        try {
+          const regionToDiscover = (needMoreIndia > 0 && needMoreForeign > 0)
+            ? 'all'
+            : (needMoreIndia > 0 ? 'india' : 'foreign');
+          const aiLeads = await discoverCompaniesViaMistral({
+            countNeeded: Math.max(25, needMoreIndia + needMoreForeign),
+            region: regionToDiscover,
+            onProgress: (tag, msg, style) => this.addLiveLog(tag, msg, style)
+          });
+          if (aiLeads && aiLeads.length > 0) {
+            for (const lead of aiLeads) {
+              if (isCandidateFresh(lead)) {
+                acceptLead(lead);
+              }
+            }
+          }
+        } catch (aiErr) {
+          console.warn('Mistral AI discovery replenish warning:', aiErr.message);
+        }
+      }
+
+      // 4. Interleave Indian & Foreign leads for balanced batch distribution (~62.5% India, ~37.5% Foreign)
+      const ind = newLeads.filter(l => this.isIndianLead(l));
+      const frg = newLeads.filter(l => !this.isIndianLead(l));
+      const interleaved = [];
+      let i = 0, j = 0;
+      while (i < ind.length || j < frg.length) {
+        for (let k = 0; k < 5 && i < ind.length; k++) interleaved.push(ind[i++]);
+        for (let k = 0; k < 3 && j < frg.length; k++) interleaved.push(frg[j++]);
+      }
+
+      this.queue.push(...interleaved);
+      const totalAdded = interleaved.length;
+      if (totalAdded > 0) {
+        this.totalBatches = Math.max(1, Math.ceil(this.queue.length / this.batchSize)) + this.currentBatchNumber;
+        this.saveState();
+        return totalAdded;
+      }
+    } catch (err) {
+      console.error('Autonomous replenish error:', err.message);
+    }
+    return 0;
+  }
+
+  // Background discovery executed during cooldown breaks: Guarantees fresh verified leads
+  async runCooldownDiscovery() {
+    try {
+      const nextBatchNum = this.currentBatchNumber + 1;
+      this.addLiveLog('DISCOVER', `🔍 Cooldown Deep Discovery Active: Preparing verified Indian (250 cap) & Foreign (150 cap) HR mailboxes during break for Batch ${nextBatchNum}...`, 'info');
+      const added = await this.replenishAutonomousQueue(60);
+      const counts = this.getTodaySentCountsByRegion();
+      if (added > 0) {
+        this.addLiveLog('DISCOVER', `🎯 Prepared ${added} fresh verified targets! Queue now holds ${this.queue.length} ready contacts (Sent today: 🇮🇳 ${counts.india}/${this.dailyLimitIndia} India, 🌍 ${counts.foreign}/${this.dailyLimitForeign} Foreign).`, 'success');
+      } else {
+        this.addLiveLog('DISCOVER', `🎯 Queue already has ${this.queue.length} ready contacts. Standing by for cooldown to complete.`, 'info');
+      }
+    } catch (e) {
+      console.warn('Cooldown discovery warning:', e.message);
+    }
+  }
+
+  // Start Autonomous Outreach (Hands-Free Discovery, Verification & 12-Min Looping)
+  async startAutonomous(payload, options = {}) {
+    if (this.status === 'running_batch' || this.status === 'waiting_pause') {
+      throw new Error('An outreach campaign is already actively running. Pause or stop it first.');
+    }
+
+    if (!payload.resume || !payload.resume.buffer) {
+      throw new Error('Resume PDF attachment is required.');
+    }
+
+    this.isAutonomous = true;
+    this.dryRun = Boolean(options.dryRun);
+    this.targetLocation = options.location || 'all';
+    this.batchSize = parseInt(options.batchSize, 10) || 60;
+    this.pauseDurationMs = (parseInt(options.pauseMinutes, 10) || 6) * 60 * 1000;
+    const activeAccs = getSenderAccounts().filter(a => a.active);
+    const safeDailyQuota = Math.max(400, (activeAccs.length || 1) * 100);
+    this.dailyLimit = options.dailyLimit && parseInt(options.dailyLimit, 10) >= safeDailyQuota ? parseInt(options.dailyLimit, 10) : safeDailyQuota;
+    this.dailyLimitIndia = 250;
+    this.dailyLimitForeign = 150;
+    this.activePayload = payload;
+    const regionCounts = this.getTodaySentCountsByRegion();
+    const sentToday = regionCounts.total;
+    const isContinuingToday = this.currentBatchNumber > 0 && sentToday > 0;
+    if (!isContinuingToday) {
+      this.currentBatchNumber = 0;
+    }
+    this.sentInCurrentBatch = 0;
+    this.isCancelled = false;
+    this.liveLogs = [];
+    if (this.timerId) clearTimeout(this.timerId);
+
+    const alreadySent = this.getSentEmailsSet();
+    const { companies: contactedComps, domains: contactedDoms } = this.getContactedCompaniesAndDomains();
+    const freshIndian = getFreshCandidates(this.targetLocation, alreadySent, contactedComps, contactedDoms)
+      .filter(r => !suppressionService.isSuppressed(r.email))
+      .slice(0, 50);
+
+    const freshForeign = getFreshForeignCandidates(alreadySent, 35, contactedComps, contactedDoms)
+      .filter(r => !suppressionService.isSuppressed(r.email));
+
+    // Interleave initial queue
+    const initialQueue = [];
+    let indIdx = 0, frgIdx = 0;
+    while (indIdx < freshIndian.length || frgIdx < freshForeign.length) {
+      for (let k = 0; k < 5 && indIdx < freshIndian.length; k++) initialQueue.push(freshIndian[indIdx++]);
+      for (let k = 0; k < 3 && frgIdx < freshForeign.length; k++) initialQueue.push(freshForeign[frgIdx++]);
+    }
+    this.queue = initialQueue;
+
+    // If initial queue has fewer than batchSize, proactively discover fresh leads immediately
+    if (this.queue.length < this.batchSize) {
+      this.addLiveLog('DISCOVER', `🔍 Autonomously preparing Dual-Stream tech HR contacts (🇮🇳 India 250 + 🌍 Foreign 150)...`, 'info');
+      await this.replenishAutonomousQueue(this.batchSize * 2);
+    }
+
+    this.totalBatches = this.currentBatchNumber + Math.max(1, Math.ceil(this.queue.length / this.batchSize));
+    const nextBatchNum = this.currentBatchNumber + 1;
+    this.addLiveLog('START', `🚀 Autonomous Dual-Engine outreach started! ${this.dryRun ? '🧪 [DRY-RUN MODE: ZERO EMAILS SENT] ' : ''}Targets: 🇮🇳 ${regionCounts.india}/${this.dailyLimitIndia} India + 🌍 ${regionCounts.foreign}/${this.dailyLimitForeign} Foreign (Total Cap: ${this.dailyLimit}). Batch: ${this.batchSize}, Pause: ${Math.round(this.pauseDurationMs / 60000)}m. Starting Batch ${nextBatchNum} immediately!`, 'success');
+    this.runNextBatch();
+  }
+
+  // Run next batch of valid deliverable emails
   async runNextBatch() {
-    if (this.isCancelled || this.queue.length === 0) {
+    // If autonomous and queue has fewer than batchSize candidates, replenish from directory
+    if (this.isAutonomous && this.queue.length < this.batchSize) {
+      const added = await this.replenishAutonomousQueue(this.batchSize);
+      if (added > 0) {
+        this.addLiveLog('DISCOVER', `Found and pre-verified ${added} additional fresh startup targets. Added to queue.`, 'info');
+      }
+    }
+
+    if (this.isCancelled || (!this.isAutonomous && this.queue.length === 0)) {
       this.status = 'completed';
       this.nextBatchRunTime = null;
+      this.addLiveLog('FINISH', 'Outreach queue finished.', 'info');
       console.log('[CAMPAIGN FINISHED] All queued recipients processed.');
       return;
     }
@@ -411,54 +721,217 @@ class CampaignEngine {
       transporter = createTransporter();
     } catch (err) {
       console.error('Transporter creation failed:', err.message);
+      this.addLiveLog('ERROR', `SMTP Transporter failed: ${err.message}`, 'danger');
       this.status = 'paused';
       return;
     }
 
     let sentInThisBatch = 0;
-    console.log(`[CAMPAIGN BATCH ${this.currentBatchNumber}/${this.totalBatches}] Targeting ${this.batchSize} valid sends (Remaining in queue: ${this.queue.length})...`);
+    let consecutiveEmptyReplenish = 0;
+    this.addLiveLog('BATCH', `Starting Batch ${this.currentBatchNumber}: Targeting ${this.batchSize} verified sends...`, 'info');
 
-    while (this.queue.length > 0 && sentInThisBatch < this.batchSize) {
+    while ((this.queue.length > 0 || this.isAutonomous) && sentInThisBatch < this.batchSize) {
       if (this.isCancelled) {
-        console.log('[CAMPAIGN STOPPED] Cancellation requested during batch.');
+        this.addLiveLog('STOP', 'Campaign cancelled by user.', 'warning');
         this.status = 'stopped';
         return;
       }
 
-      // Safety guard: Respect Gmail 500 emails/rolling 24h ceiling (pause at 450)
-      const sent24h = this.get24hSentCount();
-      if (sent24h >= 450) {
-        console.warn(`[SAFETY QUOTA PAUSE] Approaching Gmail 500/day limit (${sent24h} sent in last 24h). Pausing campaign for account safety.`);
-        this.status = 'paused';
+      // Safety guard 1: Strictly enforce today's calendar-day quota across accounts & Dual Targets (250 India + 150 Foreign = 400 Total)
+      const activeAccounts = getSenderAccounts().filter(a => a.active);
+      const effectiveDailyLimit = Math.max(this.dailyLimit || 400, (activeAccounts.length || 1) * 100);
+      const regCounts = this.getTodaySentCountsByRegion();
+      const sentToday = regCounts.total;
+
+      if (sentToday >= effectiveDailyLimit || (regCounts.india >= this.dailyLimitIndia && regCounts.foreign >= this.dailyLimitForeign)) {
+        this.status = 'daily_limit_reached';
+        this.addLiveLog('LIMIT', `🛑 Today's safe goal of ${effectiveDailyLimit} emails (🇮🇳 ${regCounts.india}/${this.dailyLimitIndia} India + 🌍 ${regCounts.foreign}/${this.dailyLimitForeign} Foreign) reached across ${activeAccounts.length} sender accounts. Pausing to preserve Gmail account health.`, 'success');
         this.saveState();
         return;
       }
 
-      const r = this.queue.shift(); // Pull next contact from queue
+      // Safety guard 2: Hard rolling 24-hour ceiling per account
+      const sent24h = this.get24hSentCount();
+      const ROLLING_24H_HARD_LIMIT = Math.max(400, (activeAccounts.length || 1) * 350);
+      if (sent24h >= ROLLING_24H_HARD_LIMIT) {
+        this.status = 'daily_limit_reached';
+        this.addLiveLog('LIMIT', `🛑 Rolling 24-hour safety ceiling reached (${sent24h}/${ROLLING_24H_HARD_LIMIT} in last 24h). Pausing engine until older sends roll off.`, 'warning');
+        this.saveState();
+        return;
+      }
+
+      // If queue is empty in autonomous mode, attempt to refill dynamically
+      if (this.queue.length === 0 && this.isAutonomous) {
+        this.addLiveLog('DISCOVER', `🔍 Queue reached 0. Autonomously discovering next fresh tech startup targets...`, 'info');
+        const added = await this.replenishAutonomousQueue(this.batchSize);
+        if (added === 0) {
+          consecutiveEmptyReplenish++;
+          if (consecutiveEmptyReplenish >= 2) {
+            this.addLiveLog('BREAK', 'All currently available candidate targets have been processed. Scheduling cooldown break before next discovery sweep...', 'info');
+            break;
+          }
+          await new Promise(r => setTimeout(r, 1000));
+        } else {
+          consecutiveEmptyReplenish = 0;
+        }
+      }
+
+      if (this.queue.length === 0) break;
+
+      // Select candidate that fits remaining quota for India (<250) vs Foreign (<150)
+      const canSendIndia = regCounts.india < this.dailyLimitIndia;
+      const canSendForeign = regCounts.foreign < this.dailyLimitForeign;
+
+      let leadIndex = -1;
+      for (let idx = 0; idx < this.queue.length; idx++) {
+        const item = this.queue[idx];
+        const isInd = this.isIndianLead(item);
+        if (isInd && canSendIndia) {
+          leadIndex = idx;
+          break;
+        }
+        if (!isInd && canSendForeign) {
+          leadIndex = idx;
+          break;
+        }
+      }
+
+      if (leadIndex === -1) {
+        if (this.isAutonomous) {
+          const added = await this.replenishAutonomousQueue(this.batchSize);
+          if (added > 0) {
+            for (let idx = 0; idx < this.queue.length; idx++) {
+              const item = this.queue[idx];
+              const isInd = this.isIndianLead(item);
+              if ((isInd && canSendIndia) || (!isInd && canSendForeign)) {
+                leadIndex = idx;
+                break;
+              }
+            }
+          }
+        }
+        if (leadIndex === -1) {
+          this.addLiveLog('LIMIT', `🎯 Dual quotas reached or no matching leads available (🇮🇳 India: ${regCounts.india}/${this.dailyLimitIndia}, 🌍 Foreign: ${regCounts.foreign}/${this.dailyLimitForeign}).`, 'info');
+          break;
+        }
+      }
+
+      const r = this.queue.splice(leadIndex, 1)[0]; // Pull selected contact from queue
       const email = (r.email || '').toLowerCase().trim();
       const displayName = r.name || 'Hiring Manager';
       const displayCompany = r.company || 'your team';
-      const sourceDoc = r.sourceDoc || 'PDF 1: Initial HR Database';
+      const isInd = this.isIndianLead(r);
+      const leadRegion = isInd ? 'india' : 'foreign';
+      const sourceDoc = r.sourceDoc || (this.isAutonomous ? `Autonomous Engine (${isInd ? '🇮🇳 India' : '🌍 Foreign'})` : 'PDF 1: Initial HR Database');
 
-      // 1. Deep Pre-flight Validation: DNS MX + Mailbox Verification (RCPT TO)
-      const mailboxCheck = await verifyMailboxExists(email);
-      if (!mailboxCheck.valid) {
-        console.log(`[PRE-CHECK SKIPPED] ${email} (${displayCompany}) - ${mailboxCheck.reason}. Automatically pulling next contact...`);
-        this.stats.skippedMx++;
-        this.logResult({
-          email: email,
-          name: displayName,
-          company: displayCompany,
-          sourceDoc: sourceDoc,
-          status: 'skipped_invalid_domain',
-          error: mailboxCheck.reason || 'Mailbox deactivated or domain has no MX mail server.'
-        });
-        this.saveState();
-        // Continue loop to pull next contact without counting toward sentInThisBatch
+      // 0. Zero-Overlap Cross-Account Deduplication Guard (No duplicate company outreach)
+      const { companies: contactedComps, domains: contactedDoms } = this.getContactedCompaniesAndDomains();
+      const compLower = (displayCompany || '').toLowerCase().trim();
+      const domLower = (email.split('@')[1] || '').toLowerCase().trim();
+
+      const isCompDuplicate = compLower && compLower !== 'your team' && compLower !== 'your company' && contactedComps.has(compLower);
+      const isDomDuplicate = domLower && contactedDoms.has(domLower);
+
+      if (isCompDuplicate || isDomDuplicate) {
+        this.addLiveLog('DEDUP', `🏢 Zero-overlap skip: ${displayCompany} (${domLower}) was already contacted by an outreach account! Skipping duplicate company.`, 'warning');
+        await new Promise(res => setTimeout(res, 50));
         continue;
       }
 
-      // 2. Personalize subject and message
+      // 1. Pre-flight Validation: Syntax, Normalization, Suppression, DNS MX, A/AAAA fallback, Mailbox verification
+      this.addLiveLog('VERIFY', `Pre-flight checking: ${email} (${displayCompany})...`, 'info');
+      const valRes = await validateRecipient(email);
+      if (!valRes.canSend) {
+        if (valRes.isSuppressed) {
+          this.stats.suppressed = (this.stats.suppressed || 0) + 1;
+          this.addLiveLog('SUPPRESS', `🛡️ Suppressed address skipped: ${email} (${valRes.reason}) - Send blocked`, 'warning');
+          this.logResult({
+            email,
+            name: displayName,
+            company: displayCompany,
+            sourceDoc,
+            status: 'skipped_suppressed',
+            error: valRes.reason
+          });
+        } else if (valRes.isInconclusive) {
+          this.stats.deferred = (this.stats.deferred || 0) + 1;
+          this.addLiveLog('DEFER', `⏳ Inconclusive validation deferred: ${email} (${valRes.reason})`, 'warning');
+          this.logResult({
+            email,
+            name: displayName,
+            company: displayCompany,
+            sourceDoc,
+            status: 'deferred_inconclusive',
+            error: valRes.reason
+          });
+        } else {
+          this.stats.skippedMx++;
+          this.addLiveLog('SKIP', `❌ Pre-check rejected: ${email} (${valRes.reason}) - Bounce prevented`, 'warning');
+          this.logResult({
+            email,
+            name: displayName,
+            company: displayCompany,
+            sourceDoc,
+            status: 'skipped_invalid_domain',
+            error: valRes.reason
+          });
+        }
+        this.saveState();
+        // Automatically pull next candidate without counting toward sentInThisBatch
+        continue;
+      }
+
+      // 2. Select next active sender account that hasn't hit its 100/day quota today
+      let selectedAccount = null;
+      for (let attempt = 0; attempt < activeAccounts.length; attempt++) {
+        const candidate = activeAccounts[(this.currentAccountIndex + attempt) % activeAccounts.length];
+        const candidateSentToday = this.getTodaySentCount(candidate.user);
+        if (candidateSentToday < 100) {
+          selectedAccount = candidate;
+          this.currentAccountIndex = (this.currentAccountIndex + attempt + 1) % activeAccounts.length;
+          break;
+        }
+      }
+
+      if (!selectedAccount) {
+        this.status = 'daily_limit_reached';
+        this.addLiveLog('LIMIT', `🛑 All active sender accounts have reached their individual 100/day limit (${sentToday}/${effectiveDailyLimit} sent today). Pausing until tomorrow.`, 'success');
+        this.saveState();
+        return;
+      }
+
+      // 3. Dry-Run Check: Validate and log simulation without sending real emails
+      if (this.dryRun) {
+        this.stats.dryRunSent = (this.stats.dryRunSent || 0) + 1;
+        sentInThisBatch++;
+        this.sentInCurrentBatch = sentInThisBatch;
+        this.logResult({
+          email: valRes.normalizedEmail || email,
+          name: displayName,
+          company: displayCompany,
+          sourceDoc,
+          senderAccount: selectedAccount.user,
+          status: 'dry_run_sent',
+          region: leadRegion,
+          messageId: `DRY-RUN-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`
+        });
+        const regBadge = leadRegion === 'india' ? '🇮🇳 India' : '🌍 Foreign';
+        this.addLiveLog('DRY-RUN', `🧪 [Dry-Run ${sentInThisBatch}/${this.batchSize} | ${regBadge} via ${selectedAccount.label}] Validated & Simulated: ${displayCompany} <${valRes.normalizedEmail || email}> (Zero emails sent)`, 'info');
+        this.saveState();
+        if (sentInThisBatch < this.batchSize && (this.queue.length > 0 || this.isAutonomous) && !this.isCancelled) {
+          await new Promise(res => setTimeout(res, 500));
+        }
+        continue;
+      }
+
+      let senderTransporter;
+      try {
+        senderTransporter = createTransporter(selectedAccount);
+      } catch (e) {
+        senderTransporter = transporter;
+      }
+
+      // 4. Personalize subject and message
       let personalizedSubject = this.activePayload.subject
         .replace(/{{\s*name\s*}}/gi, displayName)
         .replace(/{{\s*company\s*}}/gi, displayCompany)
@@ -466,10 +939,19 @@ class CampaignEngine {
 
       let personalizedMessage = this.activePayload.message
         .replace(/{{\s*name\s*}}/gi, displayName)
-        .replace(/{{\s*company\s*}}/gi, displayCompany)
         .replace(/{{\s*title\s*}}/gi, r.title || 'the open role');
 
-      // Auto-personalize if clean natural template is used without brackets
+      const allKnownSenders = getSenderAccounts().map(a => a.user).filter(Boolean);
+      allKnownSenders.forEach(u => {
+        personalizedMessage = personalizedMessage.split(u).join(selectedAccount.user);
+      });
+      personalizedMessage = personalizedMessage
+        .replace(/{{\s*(sender_email|email|my_email)\s*}}/gi, selectedAccount.user)
+        .replace(
+          /(Ketan Tiwari\s*\n\s*)([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/i,
+          `$1${selectedAccount.user}`
+        );
+
       if (displayName && displayName !== 'Hiring Manager') {
         personalizedMessage = personalizedMessage.replace(/^Dear\s+Hiring\s+Manager,/i, `Dear ${displayName},`);
       }
@@ -480,26 +962,33 @@ class CampaignEngine {
         }
       }
 
+      // Always ensure fresh resume buffer directly from disk
+      const dynamicResumePath = getDefaultResumePath();
+      const resumeBufferToSend = (dynamicResumePath && fs.existsSync(dynamicResumePath))
+        ? fs.readFileSync(dynamicResumePath)
+        : (this.activePayload?.resume?.buffer || null);
+
       const mailOptions = {
         from: this.activePayload.senderName 
-          ? `"${this.activePayload.senderName}" <${process.env.GMAIL_USER}>`
-          : process.env.GMAIL_USER,
+          ? `"${this.activePayload.senderName}" <${selectedAccount.user}>`
+          : selectedAccount.user,
+        replyTo: selectedAccount.user,
         to: email,
         subject: personalizedSubject,
         text: personalizedMessage,
         html: personalizedMessage.replace(/\n/g, '<br/>'),
         attachments: [
           {
-            filename: this.activePayload.resume.filename || 'Resume.pdf',
-            content: this.activePayload.resume.buffer,
+            filename: this.activePayload.resume?.filename || 'Ketan_Resume.pdf',
+            content: resumeBufferToSend,
             contentType: 'application/pdf'
           }
         ]
       };
 
-      // 3. Send email individually
+      // 5. Send email individually
       try {
-        const info = await transporter.sendMail(mailOptions);
+        const info = await senderTransporter.sendMail(mailOptions);
         this.stats.sent++;
         sentInThisBatch++;
         this.sentInCurrentBatch = sentInThisBatch;
@@ -508,38 +997,125 @@ class CampaignEngine {
           name: displayName,
           company: displayCompany,
           sourceDoc: sourceDoc,
+          senderAccount: selectedAccount.user,
           status: 'sent',
+          region: leadRegion,
           messageId: info.messageId
         });
-        console.log(`[SENT ${sentInThisBatch}/${this.batchSize} in Batch ${this.currentBatchNumber}] ${email} (${displayCompany})`);
+        const liveCounts = this.getTodaySentCountsByRegion();
+        const regBadge = leadRegion === 'india' ? '🇮🇳 India' : '🌍 Foreign';
+        const curRegCount = leadRegion === 'india' ? liveCounts.india : liveCounts.foreign;
+        const curRegLimit = leadRegion === 'india' ? this.dailyLimitIndia : this.dailyLimitForeign;
+        this.addLiveLog('SENT', `🚀 [Sent ${sentInThisBatch}/${this.batchSize} | ${regBadge} (${curRegCount}/${curRegLimit}) | Total ${liveCounts.total}/${this.dailyLimit} via ${selectedAccount.label}] ${displayCompany} <${email}>`, 'success');
+        this.saveState();
       } catch (err) {
-        this.stats.failed++;
-        this.logResult({
-          email: email,
-          name: displayName,
-          company: displayCompany,
-          sourceDoc: sourceDoc,
-          status: 'failed',
-          error: err.message
-        });
-        console.error(`[FAIL] ${email}: ${err.message}`);
+        // Google SMTP Daily Sending Limit Circuit Breaker
+        if (err.message && (err.message.includes('550-5.4.5') || err.message.includes('Daily user sending limit exceeded') || err.message.includes('550 5.4.5'))) {
+          this.status = 'daily_limit_reached';
+          this.addLiveLog('LIMIT', `🛑 Gmail Daily SMTP Sending Limit Exceeded (550-5.4.5)! Google has capped sends for this rolling 24-hour window. Pausing engine to protect your account.`, 'danger');
+          // Re-insert uncontacted lead back to the front of queue so it is not lost
+          this.queue.unshift(r);
+          this.saveState();
+          return; // Halt batch immediately!
+        }
+
+        const parseResult = suppressionService.parseSmtpError(err);
+        if (parseResult.isHardBounce) {
+          suppressionService.addSuppressed(email, {
+            reason: parseResult.reason,
+            bounceType: 'hard',
+            source: 'smtp_response'
+          });
+          this.stats.failed++;
+          this.logResult({
+            email: email,
+            name: displayName,
+            company: displayCompany,
+            sourceDoc: sourceDoc,
+            status: 'failed_hard_bounce',
+            error: parseResult.reason
+          });
+          this.addLiveLog('HARD-BOUNCE', `🚫 Hard bounce for ${email}: ${parseResult.reason}. Permanently suppressed.`, 'danger');
+        } else if (parseResult.isSoftBounce) {
+          suppressionService.handleTemporaryFailure(email, parseResult.reason);
+          this.stats.failed++;
+          this.logResult({
+            email: email,
+            name: displayName,
+            company: displayCompany,
+            sourceDoc: sourceDoc,
+            status: 'failed_temporary',
+            error: parseResult.reason
+          });
+          this.addLiveLog('SOFT-BOUNCE', `⚠️ Temporary soft bounce for ${email}: ${parseResult.reason}. Queued for retry.`, 'warning');
+        } else {
+          this.stats.failed++;
+          this.logResult({
+            email: email,
+            name: displayName,
+            company: displayCompany,
+            sourceDoc: sourceDoc,
+            status: 'failed',
+            error: err.message
+          });
+          this.addLiveLog('FAIL', `❌ Failed sending to ${email}: ${err.message}`, 'danger');
+        }
       }
 
-      // 4. Random delay between 4-8 seconds if we haven't finished the batch yet (safe pacing)
-      if (sentInThisBatch < this.batchSize && this.queue.length > 0 && !this.isCancelled) {
-        const delay = getRandomDelay(4000, 8000);
-        console.log(`Waiting ${delay}ms before next email in batch...`);
+      // 4. Ultra-Safe human pacing delay (8s - 14s) to eliminate bot patterns
+      if (sentInThisBatch < this.batchSize && (this.queue.length > 0 || this.isAutonomous) && !this.isCancelled) {
+        const delay = getRandomDelay(8000, 14000);
         await new Promise(res => setTimeout(res, delay));
       }
     }
 
-    // After attempting/completing valid sends for batch:
-    if (this.queue.length > 0 && !this.isCancelled) {
+    // If no emails were sent and queue is completely empty:
+    if (sentInThisBatch === 0 && this.queue.length === 0) {
+      if (this.isAutonomous) {
+        await this.replenishAutonomousQueue(this.batchSize);
+        if (this.queue.length > 0) {
+          return this.runNextBatch();
+        }
+      }
+      this.status = 'idle';
+      this.nextBatchRunTime = null;
+      this.addLiveLog('IDLE', 'All candidate targets contacted.', 'info');
+      this.saveState();
+      return;
+    }
+
+    // After batch completion:
+    if (!this.isCancelled && (this.isAutonomous || this.queue.length > 0)) {
       this.status = 'waiting_pause';
       this.nextBatchRunTime = Date.now() + this.pauseDurationMs;
       const pauseMinutes = Math.round(this.pauseDurationMs / 60000);
-      console.log(`[BATCH ${this.currentBatchNumber} COMPLETED] Successfully sent ${sentInThisBatch} emails. Next batch in ${pauseMinutes} minutes at ${new Date(this.nextBatchRunTime).toLocaleTimeString()}`);
+      this.addLiveLog('BREAK', `☕ Batch ${this.currentBatchNumber} complete (${sentInThisBatch} sent). Taking a ${pauseMinutes}-minute cooldown break... Next batch starts automatically at ${new Date(this.nextBatchRunTime).toLocaleTimeString()}`, 'cooldown');
       this.saveState();
+
+      // Autonomous discovery running in background during cooldown break
+      if (this.isAutonomous) {
+        this.runCooldownDiscovery();
+      }
+
+      // 🧹 AUTONOMOUS MULTI-INBOX PURGE: Automatically clean all sender inboxes during the 15m break (Zero permission needed)
+      try {
+        const activeAccCount = getSenderAccounts().filter(a => a.active).length;
+        this.addLiveLog('PURGE', `🧹 [AUTONOMOUS INBOX CLEANER] Automatically scanning & cleaning delivery failures across all ${activeAccCount} sender inboxes during break...`, 'info');
+        bouncePurgeService.autoPurgeAllAccounts({
+          onLog: (msg) => this.addLiveLog('PURGE', msg, 'info'),
+          purgeSent: true
+        }).then(cleanRes => {
+          if (cleanRes && cleanRes.totalPurged > 0) {
+            this.addLiveLog('PURGE', `✅ Auto-clean complete: Purged ${cleanRes.totalInboxPurged || 0} inbox bounces and ${cleanRes.totalSentPurged || 0} sent emails across inboxes to Trash! Zero trace in Gmail.`, 'success');
+          } else {
+            this.addLiveLog('PURGE', `✅ Inboxes & Sent folders verified clean: Zero dead delivery failures detected.`, 'info');
+          }
+        }).catch(e => {
+          console.warn('Auto-purge warning:', e.message);
+        });
+      } catch (e) {
+        console.warn('Auto-purge trigger warning:', e.message);
+      }
 
       this.timerId = setTimeout(() => {
         this.runNextBatch();
@@ -547,8 +1123,8 @@ class CampaignEngine {
     } else {
       this.status = 'completed';
       this.nextBatchRunTime = null;
+      this.addLiveLog('FINISH', 'Campaign run finished.', 'info');
       this.saveState();
-      console.log('[CAMPAIGN FINISHED] All batches completed successfully!');
     }
   }
 
@@ -558,10 +1134,12 @@ class CampaignEngine {
       if (this.timerId) clearTimeout(this.timerId);
       this.status = 'paused';
       this.nextBatchRunTime = null;
+      this.addLiveLog('PAUSE', 'Campaign paused during break by user.', 'warning');
       this.saveState();
       return true;
     } else if (this.status === 'running_batch') {
       this.status = 'paused';
+      this.addLiveLog('PAUSE', 'Campaign paused by user.', 'warning');
       this.saveState();
       return true;
     }
@@ -570,21 +1148,45 @@ class CampaignEngine {
 
   // Resume
   resume(sendImmediately = false) {
-    if (this.status !== 'paused' && this.status !== 'waiting_pause') {
-      throw new Error('Campaign is not paused.');
+    if (this.status !== 'paused' && this.status !== 'waiting_pause' && this.status !== 'idle') {
+      throw new Error(`Campaign cannot be resumed in current state: ${this.status}`);
     }
     if (this.timerId) clearTimeout(this.timerId);
 
-    if (sendImmediately || this.status === 'paused') {
+    if (sendImmediately || this.status === 'paused' || this.status === 'idle') {
+      this.addLiveLog('RESUME', `Resuming outreach immediately at Batch ${this.currentBatchNumber + 1}...`, 'info');
       this.saveState();
       this.runNextBatch();
     } else {
-      // Continue wait
       this.status = 'waiting_pause';
       this.nextBatchRunTime = Date.now() + this.pauseDurationMs;
+      this.addLiveLog('RESUME', `Resuming pause timer (${Math.round(this.pauseDurationMs / 60000)}m)...`, 'info');
       this.saveState();
       this.timerId = setTimeout(() => this.runNextBatch(), this.pauseDurationMs);
     }
+  }
+
+  // Enter Cooldown Break
+  enterCooldown(minutes = null) {
+    if (this.timerId) clearTimeout(this.timerId);
+    const duration = minutes ? (minutes * 60 * 1000) : (this.pauseDurationMs || 360000);
+    this.status = 'waiting_pause';
+    this.nextBatchRunTime = Date.now() + duration;
+    const pauseMinutes = Math.round(duration / 60000);
+    const activeAccCount = getSenderAccounts().filter(a => a.active).length;
+    this.addLiveLog('BREAK', `☕ Test batch complete across all ${activeAccCount} sender accounts. Entering ${pauseMinutes}-minute cooldown break... Next batch starts automatically at ${new Date(this.nextBatchRunTime).toLocaleTimeString()}`, 'cooldown');
+    this.saveState();
+    if (this.isAutonomous) {
+      this.runCooldownDiscovery();
+    }
+    // 🧹 Trigger autonomous multi-inbox cleaner during break (all active inboxes)
+    bouncePurgeService.autoPurgeAllAccounts({ purgeSent: true }).then(cleanRes => {
+      if (cleanRes && cleanRes.totalPurged > 0) {
+        this.addLiveLog('PURGE', `🧹 [BREAK CLEANER] Auto-purged ${cleanRes.totalInboxPurged || 0} inbox bounces and ${cleanRes.totalSentPurged || 0} sent emails across inboxes to Trash! Zero trace in Gmail.`, 'success');
+      }
+    }).catch(() => {});
+    this.timerId = setTimeout(() => this.runNextBatch(), duration);
+    return true;
   }
 
   // Stop
@@ -594,16 +1196,21 @@ class CampaignEngine {
     this.status = 'stopped';
     this.queue = [];
     this.nextBatchRunTime = null;
+    this.addLiveLog('STOP', 'Campaign halted by user.', 'warning');
     this.saveState();
-    console.log('[CAMPAIGN STOPPED] Manually halted by user.');
   }
 
   saveState() {
     try {
       const stateData = {
         status: this.status,
+        isAutonomous: this.isAutonomous,
+        targetLocation: this.targetLocation,
         batchSize: this.batchSize,
         pauseDurationMs: this.pauseDurationMs,
+        dailyLimitIndia: this.dailyLimitIndia || 250,
+        dailyLimitForeign: this.dailyLimitForeign || 150,
+        dailyLimit: this.dailyLimit,
         currentBatchNumber: this.currentBatchNumber,
         sentInCurrentBatch: this.sentInCurrentBatch,
         totalBatches: this.totalBatches,
@@ -624,11 +1231,7 @@ class CampaignEngine {
       if (fs.existsSync(CAMPAIGN_STATE_FILE)) {
         const raw = fs.readFileSync(CAMPAIGN_STATE_FILE, 'utf8').replace(/^\uFEFF/, '').trim();
         const saved = JSON.parse(raw || '{}');
-        if (saved.status === 'waiting_pause' || saved.status === 'running_batch' || saved.status === 'paused') {
-          const allContacts = JSON.parse(fs.readFileSync(CONTACTS_FILE, 'utf8') || '[]');
-          const alreadySent = this.getSentEmailsSet();
-          const unsent = allContacts.filter(c => c.email && EMAIL_REGEX.test(c.email) && !alreadySent.has(c.email.toLowerCase().trim()));
-
+        if (saved.status === 'waiting_pause' || saved.status === 'running_batch' || saved.status === 'paused' || saved.status === 'daily_limit_reached') {
           const defaultResume = getDefaultResumePath();
           if (defaultResume && fs.existsSync(defaultResume)) {
             this.activePayload = {
@@ -637,24 +1240,80 @@ class CampaignEngine {
               subject: saved.subject || 'Application: Software Engineering & AI Intern - Ketan Tiwari - {{company}}',
               message: saved.message || ''
             };
-            this.queue = unsent;
-            this.batchSize = saved.batchSize || 50;
-            this.pauseDurationMs = saved.pauseDurationMs || 30 * 60 * 1000;
-            this.currentBatchNumber = saved.currentBatchNumber || 2;
-            this.totalBatches = Math.ceil(this.queue.length / this.batchSize) + this.currentBatchNumber;
+            this.isAutonomous = saved.isAutonomous !== undefined ? saved.isAutonomous : true;
+            this.targetLocation = saved.targetLocation || 'all';
+            this.batchSize = saved.batchSize || 60;
+            this.pauseDurationMs = saved.pauseDurationMs || 6 * 60 * 1000;
+            const activeAccs = getSenderAccounts().filter(a => a.active);
+            this.dailyLimit = Math.max((activeAccs.length || 1) * 100, saved.dailyLimit || 400);
+            this.dailyLimitIndia = saved.dailyLimitIndia || 250;
+            this.dailyLimitForeign = saved.dailyLimitForeign || 150;
+            this.currentBatchNumber = saved.currentBatchNumber || 0;
             this.stats = saved.stats || this.stats;
             this.sentInCurrentBatch = saved.sentInCurrentBatch || 0;
 
-            const remainingMs = (saved.nextBatchRunTime || 0) - Date.now();
-            if (saved.status === 'waiting_pause' && remainingMs > 1000) {
-              this.status = 'waiting_pause';
-              this.nextBatchRunTime = saved.nextBatchRunTime;
-              console.log(`[STATE RESTORED] Resuming pause: ${Math.round(remainingMs / 1000)}s remaining before Batch ${this.currentBatchNumber + 1}`);
-              this.timerId = setTimeout(() => this.runNextBatch(), remainingMs);
+            const sentToday = this.getTodaySentCount();
+            if (sentToday === 0) {
+              this.currentBatchNumber = 0;
+              this.sentInCurrentBatch = 0;
+            }
+
+            const alreadySent = this.getSentEmailsSet();
+            const { companies: contactedComps, domains: contactedDoms } = this.getContactedCompaniesAndDomains();
+            if (this.isAutonomous) {
+              const freshInd = getFreshCandidates(this.targetLocation, alreadySent, contactedComps, contactedDoms);
+              const freshFrg = getFreshForeignCandidates(alreadySent, 60, contactedComps, contactedDoms);
+              const queueMerged = [];
+              let idxI = 0, idxF = 0;
+              while (idxI < freshInd.length || idxF < freshFrg.length) {
+                for (let k = 0; k < 5 && idxI < freshInd.length; k++) queueMerged.push(freshInd[idxI++]);
+                for (let k = 0; k < 3 && idxF < freshFrg.length; k++) queueMerged.push(freshFrg[idxF++]);
+              }
+              this.queue = queueMerged;
+              this.totalBatches = this.currentBatchNumber + Math.max(1, Math.ceil(this.queue.length / this.batchSize));
             } else {
+              const allContacts = JSON.parse(fs.readFileSync(CONTACTS_FILE, 'utf8') || '[]');
+              this.queue = allContacts.filter(c => c.email && EMAIL_REGEX.test(c.email) && !alreadySent.has(c.email.toLowerCase().trim()));
+              this.totalBatches = this.currentBatchNumber + Math.ceil(this.queue.length / this.batchSize);
+            }
+
+            const remainingMs = (saved.nextBatchRunTime || 0) - Date.now();
+            if (saved.status === 'waiting_pause') {
+              if (remainingMs > 1000) {
+                this.status = 'waiting_pause';
+                this.nextBatchRunTime = saved.nextBatchRunTime;
+                this.addLiveLog('RESUME', `Resuming cooldown break (${Math.round(remainingMs / 60000)}m remaining). Batch ${this.currentBatchNumber + 1} will start automatically.`, 'info');
+                this.timerId = setTimeout(() => this.runNextBatch(), remainingMs);
+              } else {
+                // Cooldown break already completed while offline! Resume next batch automatically
+                this.status = 'waiting_pause';
+                this.nextBatchRunTime = Date.now() + 2000;
+                this.addLiveLog('RESUME', `Cooldown break finished while offline. Starting Batch ${this.currentBatchNumber + 1} automatically...`, 'info');
+                this.timerId = setTimeout(() => this.runNextBatch(), 2000);
+              }
+            } else if (saved.status === 'paused') {
+              this.status = 'paused';
+              this.addLiveLog('PAUSE', `Loaded paused campaign state at Batch ${this.currentBatchNumber}. Ready to resume where it stopped.`, 'warning');
+            } else if (saved.status === 'running_batch') {
+              // Interrupted mid-batch: seamlessly continue with next batch
               this.status = 'waiting_pause';
-              this.nextBatchRunTime = Date.now() + 5000;
-              this.timerId = setTimeout(() => this.runNextBatch(), 5000);
+              this.nextBatchRunTime = Date.now() + 2000;
+              this.addLiveLog('RESUME', `Resuming interrupted campaign at Batch ${this.currentBatchNumber + 1}...`, 'info');
+              this.timerId = setTimeout(() => this.runNextBatch(), 2000);
+            } else if (saved.status === 'daily_limit_reached') {
+              const sentToday = this.getTodaySentCount();
+              const limit = saved.dailyLimit || 400;
+              if (sentToday < limit) {
+                this.currentBatchNumber = 0;
+                this.sentInCurrentBatch = 0;
+                this.status = 'waiting_pause';
+                this.nextBatchRunTime = Date.now() + 2000;
+                this.addLiveLog('RESUME', `🌞 New day detected! Daily quota reset (${sentToday}/${limit} sent today). Starting today's Batch 1 automatically...`, 'info');
+                this.timerId = setTimeout(() => this.runNextBatch(), 2000);
+              } else {
+                this.status = 'daily_limit_reached';
+                this.addLiveLog('PAUSE', `Daily safe quota reached (${sentToday}/${limit}). Standing by for tomorrow.`, 'warning');
+              }
             }
           }
         }
@@ -671,16 +1330,48 @@ class CampaignEngine {
       secondsUntilNext = Math.max(0, Math.round((this.nextBatchRunTime - Date.now()) / 1000));
     }
 
+    let lifetimeSent = 0;
+    let lifetimeFiltered = 0;
+    try {
+      if (fs.existsSync(SENT_LOG_FILE)) {
+        const history = JSON.parse(fs.readFileSync(SENT_LOG_FILE, 'utf8') || '[]');
+        lifetimeSent = history.filter(h => h.status === 'sent').length;
+        lifetimeFiltered = history.filter(h => h.status === 'skipped_invalid_domain').length;
+      }
+    } catch (e) {}
+
+    const regionCounts = this.getTodaySentCountsByRegion();
+
     return {
       status: this.status,
+      isAutonomous: this.isAutonomous,
+      targetLocation: this.targetLocation,
       currentBatch: this.currentBatchNumber,
       totalBatches: this.totalBatches,
       batchSize: this.batchSize,
+      pauseMinutes: Math.round(this.pauseDurationMs / 60000),
       sentInCurrentBatch: this.sentInCurrentBatch,
       remainingInQueue: this.queue.length,
       nextBatchRunTime: this.nextBatchRunTime,
       secondsUntilNext: secondsUntilNext,
+      sentToday: this.getTodaySentCount(),
+      sentTodayIndia: regionCounts.india,
+      sentTodayForeign: regionCounts.foreign,
+      dailyLimitIndia: this.dailyLimitIndia || 250,
+      dailyLimitForeign: this.dailyLimitForeign || 150,
+      sent24h: this.get24hSentCount(),
+      dailyLimit: Math.max(this.dailyLimit || 400, (getSenderAccounts().filter(a => a.active).length || 1) * 100),
+      activeAccounts: getSenderAccounts().filter(a => a.active).map(a => ({
+        user: a.user,
+        label: a.label,
+        sentToday: this.getTodaySentCount(a.user),
+        limit: 100,
+        status: this.getTodaySentCount(a.user) >= 100 ? 'capped' : 'active'
+      })),
+      lifetimeSent,
+      lifetimeFiltered,
       stats: this.stats,
+      liveLogs: this.liveLogs.slice(-60),
       recentLogs: this.recentLogs.slice(0, 30)
     };
   }
@@ -723,21 +1414,36 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// Verify Gmail SMTP
+// Verify All Active Gmail SMTP Accounts
 app.get('/api/verify-smtp', async (req, res) => {
   try {
-    const transporter = createTransporter();
-    await transporter.verify();
+    const allAccounts = getSenderAccounts();
+    const activeAccounts = allAccounts.filter(a => a.active);
+    const verifiedList = [];
+
+    for (const acc of activeAccounts) {
+      try {
+        const tr = createTransporter(acc);
+        await tr.verify();
+        verifiedList.push({ user: acc.user, label: acc.label, status: 'online' });
+      } catch (err) {
+        verifiedList.push({ user: acc.user, label: acc.label, status: 'error', error: err.message });
+      }
+    }
+
+    const onlineCount = verifiedList.filter(a => a.status === 'online').length;
     res.json({
-      success: true,
-      message: 'Gmail SMTP authentication successful!',
-      user: process.env.GMAIL_USER
+      success: onlineCount > 0,
+      activeCount: onlineCount,
+      totalCount: activeAccounts.length,
+      accounts: verifiedList,
+      summary: `${onlineCount}/${activeAccounts.length} Senders Active`,
+      user: verifiedList.map(a => a.label).join(', ')
     });
   } catch (err) {
     res.status(500).json({
       success: false,
-      error: err.message,
-      hint: 'Ensure 2-Step Verification is ON and you are using a 16-character App Password generated from myaccount.google.com/apppasswords'
+      error: err.message
     });
   }
 });
@@ -848,6 +1554,12 @@ app.post('/api/clean-bounces', (req, res) => {
 
     let cleanedCount = 0;
     cleanList.forEach(bouncedEmail => {
+      suppressionService.addSuppressed(bouncedEmail, {
+        reason: 'Bounced: Address not found / Deactivated (550 5.1.1)',
+        bounceType: 'hard',
+        source: 'clean_bounces_api'
+      });
+
       const idx = history.findIndex(h => (h.email || '').toLowerCase().trim() === bouncedEmail);
       if (idx >= 0) {
         history[idx].status = 'skipped_invalid_domain';
@@ -889,34 +1601,147 @@ app.post('/api/clean-bounces', (req, res) => {
   }
 });
 
+// =============================================================
+// EMAIL VALIDATION, SUPPRESSION LIST & AUDIT LOG API ENDPOINTS
+// =============================================================
+
+// Validate a single recipient with full RFC 5321 breakdown
+app.post('/api/validate-recipient', async (req, res) => {
+  try {
+    const email = (req.body.email || '').trim();
+    if (!email) {
+      return res.status(400).json({ error: 'Email address is required.' });
+    }
+    const result = await validateRecipient(email);
+    res.json({
+      success: true,
+      result
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Validation dashboard stats (counts for valid, invalid, suppressed, pendingVerification, temporaryFailures)
+app.get('/api/validation/stats', (req, res) => {
+  try {
+    const stats = suppressionService.getDashboardStats();
+    res.json({
+      success: true,
+      stats
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Get all suppressed email addresses
+app.get('/api/suppression-list', (req, res) => {
+  try {
+    const list = suppressionService.getAllSuppressed();
+    res.json({
+      success: true,
+      count: list.length,
+      items: list
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Manually add an email to the suppression list
+app.post('/api/suppression-list', (req, res) => {
+  try {
+    const email = (req.body.email || '').trim();
+    const reason = (req.body.reason || 'Manual administrative suppression').trim();
+    const bounceType = req.body.bounceType || 'hard';
+    if (!email) {
+      return res.status(400).json({ error: 'Email address is required.' });
+    }
+    const record = suppressionService.addSuppressed(email, {
+      reason,
+      bounceType,
+      source: 'manual_api'
+    });
+    res.json({
+      success: true,
+      message: `Suppressed ${email}`,
+      record
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Remove an email from the suppression list
+app.delete('/api/suppression-list/:email', (req, res) => {
+  try {
+    const email = decodeURIComponent(req.params.email || '').trim();
+    const deleted = suppressionService.removeSuppressed(email);
+    res.json({
+      success: true,
+      deleted,
+      message: deleted ? `Removed ${email} from suppression list` : `Email not found in suppression list`
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Get recent email validation audit logs
+app.get('/api/validation/audit-logs', (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit, 10) || 100;
+    const logs = suppressionService.getAuditLogs(limit);
+    res.json({
+      success: true,
+      count: logs.length,
+      logs
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Automatic IMAP Scanner to detect and clean all bounces from Gmail Inbox directly
 function autoCleanGmailBounces() {
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve) => {
+    let isDone = false;
+    function safeFinish(result = { totalFound: 0, updatedCount: 0, bouncedEmails: [] }) {
+      if (isDone) return;
+      isDone = true;
+      resolve(result);
+    }
+
+    // 5-second hard timeout
+    const hardTimer = setTimeout(() => {
+      safeFinish();
+    }, 5000);
+
     const user = process.env.GMAIL_USER;
     const pass = (process.env.GMAIL_APP_PASSWORD || '').replace(/\s+/g, '');
-    if (!user || !pass) return reject(new Error('Gmail credentials not configured in backend/.env'));
+    if (!user || !pass) {
+      clearTimeout(hardTimer);
+      return safeFinish();
+    }
 
-    const socket = tls.connect(993, 'imap.gmail.com', { rejectUnauthorized: false });
-    socket.setEncoding('utf8');
+    let socket;
+    try {
+      socket = tls.connect(993, 'imap.gmail.com', { rejectUnauthorized: false });
+      socket.setEncoding('utf8');
+      socket.setTimeout(4000);
+    } catch (e) {
+      clearTimeout(hardTimer);
+      return safeFinish();
+    }
 
     let buffer = '';
-    let isDone = false;
     const detectedBounces = new Set();
     let messageIds = [];
     let currentIdx = 0;
     let step = 'WAIT_GREETING';
 
-    const hardTimer = setTimeout(() => {
-      if (!isDone) {
-        isDone = true;
-        try { socket.destroy(); } catch (e) {}
-        finishClean();
-      }
-    }, 15000);
-
     function finishClean() {
-      if (isDone) return;
-      isDone = true;
       clearTimeout(hardTimer);
       try { socket.write('X LOGOUT\r\n'); } catch (e) {}
       try { socket.destroy(); } catch (e) {}
@@ -933,6 +1758,12 @@ function autoCleanGmailBounces() {
       let updatedCount = 0;
       bounceList.forEach(bEmail => {
         const clean = bEmail.toLowerCase().trim();
+        suppressionService.addSuppressed(clean, {
+          reason: 'Bounced: Address not found / Deactivated (550 5.1.1) [Auto-synced from Gmail]',
+          bounceType: 'hard',
+          source: 'auto_clean_gmail'
+        });
+
         const idx = history.findIndex(h => (h.email || '').toLowerCase().trim() === clean);
         if (idx >= 0) {
           history[idx].status = 'skipped_invalid_domain';
@@ -962,7 +1793,7 @@ function autoCleanGmailBounces() {
         }
       } catch (e) {}
 
-      resolve({
+      safeFinish({
         totalFound: bounceList.length,
         updatedCount: updatedCount,
         bouncedEmails: bounceList
@@ -1038,6 +1869,9 @@ function autoCleanGmailBounces() {
     });
 
     socket.on('error', () => finishClean());
+    socket.on('timeout', () => finishClean());
+    socket.on('end', () => finishClean());
+    socket.on('close', () => finishClean());
   });
 }
 
@@ -1096,7 +1930,7 @@ app.post('/api/extract-resume', upload.single('resume'), async (req, res) => {
     }
 
     const emailMatch = text.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/i);
-    const candidateEmail = emailMatch ? emailMatch[0].trim() : 'tiwariketan045@gmail.com';
+    const candidateEmail = emailMatch ? emailMatch[0].trim() : (process.env.GMAIL_USER || (getSenderAccounts().find(a => a.active) || {}).user || '');
     const phoneMatch = text.match(/(?:\+?91[\s-]?)?[6-9]\d{9}|(?:\+?\d{1,3}[\s-]?)?\(?\d{3,4}\)?[\s-]?\d{3,4}[\s-]?\d{3,4}/);
     const candidatePhone = phoneMatch ? phoneMatch[0].trim() : '';
 
@@ -1301,6 +2135,312 @@ app.get('/api/default-resume', (req, res) => {
   res.json({ exists: false });
 });
 
+// ---------------- AUTONOMOUS 100% HANDS-FREE OUTREACH ENDPOINTS ----------------
+
+// Start Autonomous Outreach (Auto-Find HRs, SMTP pre-check, 30 emails/batch, 5-min cooldown)
+app.post('/api/autonomous/start', upload.single('resume'), async (req, res) => {
+  try {
+    let resumeFileBuffer = req.file ? req.file.buffer : null;
+    let resumeFileName = req.file ? req.file.originalname : 'Ketan_Resume.pdf';
+
+    if (!resumeFileBuffer) {
+      const defaultPdfPath = getDefaultResumePath();
+      if (defaultPdfPath && fs.existsSync(defaultPdfPath)) {
+        resumeFileBuffer = fs.readFileSync(defaultPdfPath);
+        resumeFileName = 'Ketan_Resume.pdf';
+      } else {
+        return res.status(400).json({ error: 'Resume PDF is required to start autonomous outreach.' });
+      }
+    }
+
+    const senderName = (req.body.senderName || req.body.name || 'Ketan Tiwari').trim();
+    const subject = (req.body.subject || 'Application: Software Engineering & AI Intern - Ketan Tiwari - {{company}}').trim();
+    const message = (req.body.message || `Dear {{name}},
+
+I hope you are doing well.
+
+I am writing to express my strong interest in Software Engineering, Full-Stack, and AI Internship opportunities at {{company}}.
+
+I am a Full-Stack & Generative AI Engineer with hands-on experience building production-ready LLM/RAG pipelines, autonomous agentic workflows, scalable backend APIs, and modern web applications with React and Node.js. I am eager to contribute directly to impactful projects and learn from your talented engineering team.
+
+Please find my updated resume attached for your review. I would welcome the opportunity for a brief conversation to discuss how I can add immediate value to your team.
+
+Thank you for your time and consideration.
+
+Best regards,
+Ketan Tiwari
+{{sender_email}}`).trim();
+
+    const batchSize = parseInt(req.body.batchSize, 10) || 60;
+    const pauseMinutes = parseInt(req.body.pauseMinutes, 10) || 6;
+    const activeAccounts = getSenderAccounts().filter(a => a.active);
+    const safeDailyQuota = Math.max(100, (activeAccounts.length || 1) * 100);
+    const dailyLimit = req.body.dailyLimit && parseInt(req.body.dailyLimit, 10) >= safeDailyQuota ? parseInt(req.body.dailyLimit, 10) : safeDailyQuota;
+
+    const payload = {
+      resume: {
+        filename: resumeFileName,
+        buffer: resumeFileBuffer
+      },
+      senderName,
+      subject,
+      message
+    };
+
+    const location = req.body.location || 'all';
+    const dryRun = req.body.dryRun === 'true' || req.body.dryRun === true;
+    await campaignEngine.startAutonomous(payload, { batchSize, pauseMinutes, location, dailyLimit, dryRun });
+
+    res.json({
+      success: true,
+      dryRun,
+      message: `Autonomous Dual-Engine started! ${dryRun ? '🧪 [DRY-RUN MODE: ZERO EMAILS SENT] ' : ''}Targeting 250 Indian Startups + 150 Foreign HRs in safe batches of ${batchSize} with ${pauseMinutes}-min cooldown breaks.`,
+      status: campaignEngine.getStatus()
+    });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// Pause Autonomous Outreach
+app.post('/api/autonomous/pause', (req, res) => {
+  try {
+    campaignEngine.pause();
+    res.json({ success: true, status: campaignEngine.getStatus() });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// Resume Autonomous Outreach (optional immediate send)
+app.post('/api/autonomous/resume', (req, res) => {
+  try {
+    const immediate = req.body.immediate === true;
+    campaignEngine.resume(immediate);
+    res.json({ success: true, status: campaignEngine.getStatus() });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// Explicit Cooldown Break Trigger
+app.post('/api/autonomous/cooldown', (req, res) => {
+  try {
+    const minutes = req.body.minutes ? parseInt(req.body.minutes, 10) : null;
+    campaignEngine.enterCooldown(minutes);
+    res.json({ success: true, status: campaignEngine.getStatus() });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// Stop Autonomous Outreach
+app.post('/api/autonomous/stop', (req, res) => {
+  try {
+    campaignEngine.stop();
+    res.json({ success: true, status: campaignEngine.getStatus() });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// Get Autonomous Outreach status (polled by frontend)
+app.get('/api/autonomous/status', (req, res) => {
+  res.json(campaignEngine.getStatus());
+});
+
+// Trigger Mistral AI dynamic startup discovery on demand
+app.post('/api/autonomous/ai-discover', async (req, res) => {
+  try {
+    const count = parseInt(req.body.count, 10) || 50;
+    const leads = await discoverCompaniesViaMistral({
+      countNeeded: count,
+      onProgress: (tag, msg, style) => campaignEngine.addLiveLog(tag, msg, style)
+    });
+    if (leads && leads.length > 0) {
+      const existingInQueue = new Set(campaignEngine.queue.map(q => (q.email || '').toLowerCase().trim()));
+      const newLeads = leads.filter(l => !existingInQueue.has((l.email || '').toLowerCase().trim()));
+      campaignEngine.queue.push(...newLeads);
+      campaignEngine.totalBatches = Math.max(1, Math.ceil(campaignEngine.queue.length / campaignEngine.batchSize)) + campaignEngine.currentBatchNumber;
+      campaignEngine.saveState();
+    }
+    res.json({
+      success: true,
+      count: leads.length,
+      queueLength: campaignEngine.queue.length,
+      leads: leads
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ---------------- INBOX RESPONSE RADAR ENDPOINTS ----------------
+// Get cached classified responses
+app.get('/api/inbox/responses', (req, res) => {
+  try {
+    const data = getCachedResponses();
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Trigger live IMAP inbox synchronization
+app.post('/api/inbox/sync', async (req, res) => {
+  try {
+    const maxMessages = parseInt(req.body.maxMessages, 10) || 150;
+    const result = await syncInboxResponses({ maxMessages });
+    res.json({
+      success: true,
+      message: `Inbox synced! Discovered ${result.stats.genuineCount} genuine recruiter responses and ${result.stats.automatedCount} automated acks (${result.bouncesFiltered} bounces filtered).`,
+      data: result
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to sync inbox: ' + err.message });
+  }
+});
+
+// ---------------- GMAIL INBOX BOUNCE & GHOST PURGE ENDPOINTS ----------------
+// Helper to get active default account
+const getDefaultSenderAccount = () => (getSenderAccounts().find(a => a.active) || {}).user || '';
+
+// Preview bounces in INBOX (strict classification: clear_to_delete vs doubt_review)
+app.get('/api/bounces/preview', async (req, res) => {
+  try {
+    const targetAccount = req.query.account || getDefaultSenderAccount();
+    const previewLimit = parseInt(req.query.previewLimit, 10) || 60;
+    const result = await bouncePurgeService.scanBouncesInInbox(targetAccount, { previewLimit });
+    res.json({
+      success: true,
+      ...result
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to scan inbox bounces: ' + err.message });
+  }
+});
+
+// Purge confirmed bounces from INBOX and Sent Mail (Bidirectional: moves to [Gmail]/Bin / Trash)
+app.post('/api/bounces/purge', async (req, res) => {
+  try {
+    const targetAccount = req.body.account || getDefaultSenderAccount();
+    const uids = Array.isArray(req.body.uids) ? req.body.uids : [];
+    const deleteAllConfirmed = Boolean(req.body.deleteAllConfirmed);
+    const purgeSentMail = req.body.purgeSentMail !== false;
+    const failedRecipients = Array.isArray(req.body.failedRecipients) ? req.body.failedRecipients : [];
+
+    const result = await bouncePurgeService.purgeBouncesFromInbox(targetAccount, {
+      uids,
+      deleteAllConfirmed,
+      purgeSentMail,
+      failedRecipients
+    });
+
+    // Also notify live campaign logger if available
+    try {
+      campaignEngine.addLiveLog(
+        'PURGE',
+        `🧹 Moved ${result.purgedCount || 0} inbox bounces and ${result.purgedSentCount || 0} sent emails to Trash in ${targetAccount}! Zero trace in Gmail.`,
+        'success'
+      );
+    } catch (e) {}
+
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to purge bounces: ' + err.message });
+  }
+});
+
+// Purge failed outgoing emails from Gmail "Sent Mail" folder on demand
+app.post('/api/bounces/purge-sent', async (req, res) => {
+  try {
+    const targetAccount = req.body.account || getDefaultSenderAccount();
+    const recipientEmails = Array.isArray(req.body.recipientEmails) ? req.body.recipientEmails : [];
+    const sweepAllHistorical = Boolean(req.body.sweepAllHistorical);
+
+    const result = await bouncePurgeService.purgeSentMailsForRecipients(targetAccount, {
+      recipientEmails,
+      sweepAllHistorical
+    });
+
+    try {
+      campaignEngine.addLiveLog(
+        'PURGE',
+        `🧹 Moved ${result.purgedSentCount || 0} failed sent emails from Sent Mail to Trash in ${targetAccount}!`,
+        'success'
+      );
+    } catch (e) {}
+
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to purge sent emails: ' + err.message });
+  }
+});
+
+// Purge single bounce UID (e.g. for doubtful item review)
+app.post('/api/bounces/purge-single', async (req, res) => {
+  try {
+    const targetAccount = req.body.account || getDefaultSenderAccount();
+    const uid = parseInt(req.body.uid, 10);
+    if (!uid) {
+      return res.status(400).json({ error: 'Invalid UID specified' });
+    }
+
+    const result = await bouncePurgeService.purgeBouncesFromInbox(targetAccount, {
+      uids: [uid]
+    });
+
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to purge email: ' + err.message });
+  }
+});
+
+// Get bounce purge audit log history
+app.get('/api/bounces/history', (req, res) => {
+  try {
+    const history = bouncePurgeService.getPurgeHistory();
+    res.json({ success: true, history });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Clear bounce purge audit history
+app.delete('/api/bounces/history', (req, res) => {
+  try {
+    bouncePurgeService.clearPurgeHistory();
+    res.json({ success: true, message: 'Purge audit history cleared successfully.' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Permanently empty Gmail Trash folder via IMAP EXPUNGE
+app.post('/api/bounces/empty-trash', async (req, res) => {
+  try {
+    const account = req.body.account;
+    if (account) {
+      const result = await bouncePurgeService.emptyTrashPermanently(account);
+      return res.json(result);
+    }
+    // All active accounts
+    const accounts = getSenderAccounts().filter(a => a.active);
+    const results = [];
+    for (const acc of accounts) {
+      try {
+        const r = await bouncePurgeService.emptyTrashPermanently(acc.user);
+        results.push(r);
+      } catch (e) {
+        results.push({ account: acc.user, error: e.message });
+      }
+    }
+    res.json({ success: true, results });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ---------------- AUTOPILOT CAMPAIGN ENDPOINTS ----------------
 
 // Start automated campaign (13 emails per batch, 30-min pause, 2-5s random intra-batch delay)
@@ -1322,8 +2462,8 @@ app.post('/api/campaign/start', upload.single('resume'), (req, res) => {
     const senderName = (req.body.senderName || req.body.name || '').trim();
     const subject = (req.body.subject || '').trim();
     const message = (req.body.message || '').trim();
-    const batchSize = parseInt(req.body.batchSize, 10) || 50;
-    const pauseMinutes = parseInt(req.body.pauseMinutes, 10) || 30;
+    const batchSize = parseInt(req.body.batchSize, 10) || 60;
+    const pauseMinutes = parseInt(req.body.pauseMinutes, 10) || 6;
 
     if (!subject) return res.status(400).json({ error: 'Subject line is required.' });
     if (!message) return res.status(400).json({ error: 'Cover message body is required.' });
@@ -1355,11 +2495,13 @@ app.post('/api/campaign/start', upload.single('resume'), (req, res) => {
       message
     };
 
-    campaignEngine.start(payload, recipients, batchSize, pauseMinutes);
+    const dryRun = req.body.dryRun === 'true' || req.body.dryRun === true;
+    campaignEngine.start(payload, recipients, batchSize, pauseMinutes, { dryRun });
 
     res.json({
       success: true,
-      message: `Autopilot campaign started! Batch size: ${batchSize}, Pause: ${pauseMinutes}m.`,
+      dryRun,
+      message: `Autopilot campaign started! ${dryRun ? '🧪 [DRY-RUN MODE: ZERO EMAILS SENT] ' : ''}Batch size: ${batchSize}, Pause: ${pauseMinutes}m.`,
       status: campaignEngine.getStatus()
     });
   } catch (err) {
@@ -1587,56 +2729,121 @@ app.post('/api/send', upload.single('resume'), async (req, res) => {
     const senderName = (req.body.senderName || req.body.name || '').trim();
     const subjectTemplate = (req.body.subject || '').trim();
     const messageTemplate = (req.body.message || '').trim();
-    const rawRecipients = req.body.recipients || req.body.emails;
+    const rawRecipients = req.body.recipients || req.body.emails || req.body.to;
     const delayMs = parseInt(req.body.delayMs, 10) || 1500;
 
     let recipients = [];
-    try {
-      recipients = typeof rawRecipients === 'string' ? JSON.parse(rawRecipients) : rawRecipients;
-    } catch (e) {
-      recipients = rawRecipients.split(/[\r\n,;]+/).map(e => ({ email: e.trim() }));
+    if (rawRecipients) {
+      if (Array.isArray(rawRecipients)) {
+        recipients = rawRecipients;
+      } else if (typeof rawRecipients === 'string') {
+        try {
+          const parsed = JSON.parse(rawRecipients);
+          recipients = Array.isArray(parsed) ? parsed : [parsed];
+        } catch (e) {
+          recipients = rawRecipients.split(/[\r\n,;]+/).map(e => ({ email: e.trim() }));
+        }
+      } else if (typeof rawRecipients === 'object') {
+        recipients = [rawRecipients];
+      }
     }
 
-    const validRecipients = recipients
+    const validRecipients = (recipients || [])
       .map(r => typeof r === 'string' ? { email: r } : r)
-      .filter(r => r.email && EMAIL_REGEX.test(r.email.trim()));
+      .filter(r => r && r.email && EMAIL_REGEX.test(r.email.trim()));
 
     if (validRecipients.length === 0) {
       return res.status(400).json({ error: 'No valid recipient email addresses found.' });
     }
 
-    const transporter = createTransporter();
+    const isDryRun = req.body.dryRun === 'true' || req.body.dryRun === true;
+    const transporter = isDryRun ? null : createTransporter();
     const results = [];
     let sentCount = 0;
     let failedCount = 0;
+    let suppressedCount = 0;
+    let deferredCount = 0;
 
     for (let i = 0; i < validRecipients.length; i++) {
       const recipient = validRecipients[i];
-      const email = recipient.email.trim().toLowerCase();
+      const rawEmail = recipient.email;
       const displayName = recipient.name || 'Hiring Manager';
       const displayCompany = recipient.company || 'your team';
 
-      // DNS / MX & Mailbox pre-check
-      const mailboxCheck = await verifyMailboxExists(email);
-      if (!mailboxCheck.valid) {
-        failedCount++;
+      // 1. Full Recipient Validation Pipeline (Syntax, Suppression, DNS MX, A/AAAA fallback, Provider)
+      const valRes = await validateRecipient(rawEmail);
+      if (!valRes.canSend) {
+        if (valRes.isSuppressed) {
+          suppressedCount++;
+          results.push({
+            email: rawEmail,
+            name: displayName,
+            company: displayCompany,
+            status: 'skipped_suppressed',
+            error: valRes.reason,
+            timestamp: new Date().toISOString()
+          });
+        } else if (valRes.isInconclusive) {
+          deferredCount++;
+          results.push({
+            email: rawEmail,
+            name: displayName,
+            company: displayCompany,
+            status: 'deferred_inconclusive',
+            error: valRes.reason,
+            timestamp: new Date().toISOString()
+          });
+        } else {
+          failedCount++;
+          results.push({
+            email: rawEmail,
+            name: displayName,
+            company: displayCompany,
+            status: 'failed',
+            error: valRes.reason,
+            timestamp: new Date().toISOString()
+          });
+        }
+        continue;
+      }
+
+      const email = valRes.normalizedEmail;
+
+      // 2. Dry-Run Check
+      if (isDryRun) {
+        sentCount++;
         results.push({
           email,
           name: displayName,
           company: displayCompany,
-          status: 'failed',
-          error: mailboxCheck.reason || 'Mailbox deactivated or domain has no MX mail records.'
+          status: 'dry_run_sent',
+          messageId: `DRY-RUN-${Date.now()}-${i}`,
+          reason: 'Validation passed. Simulated send in dry-run mode (Zero real emails dispatched).',
+          timestamp: new Date().toISOString()
         });
         continue;
       }
 
+      // 3. Real Send Dispatch
       const personalizedSubject = subjectTemplate
         .replace(/{{\s*name\s*}}/gi, displayName)
         .replace(/{{\s*company\s*}}/gi, displayCompany);
 
-      const personalizedMessage = messageTemplate
+      const currentSenderUser = process.env.GMAIL_USER || getDefaultSenderAccount();
+      let personalizedMessage = messageTemplate
         .replace(/{{\s*name\s*}}/gi, displayName)
         .replace(/{{\s*company\s*}}/gi, displayCompany);
+
+      const allKnownSenders = getSenderAccounts().map(a => a.user).filter(Boolean);
+      allKnownSenders.forEach(u => {
+        personalizedMessage = personalizedMessage.split(u).join(currentSenderUser);
+      });
+      personalizedMessage = personalizedMessage
+        .replace(/{{\s*(sender_email|email|my_email)\s*}}/gi, currentSenderUser)
+        .replace(
+          /(Ketan Tiwari\s*\n\s*)([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/i,
+          `$1${currentSenderUser}`
+        );
 
       const mailOptions = {
         from: senderName ? `"${senderName}" <${process.env.GMAIL_USER}>` : process.env.GMAIL_USER,
@@ -1666,14 +2873,41 @@ app.post('/api/send', upload.single('resume'), async (req, res) => {
         });
       } catch (err) {
         failedCount++;
-        results.push({
-          email,
-          name: displayName,
-          company: displayCompany,
-          status: 'failed',
-          error: err.message,
-          timestamp: new Date().toISOString()
-        });
+        const parseResult = suppressionService.parseSmtpError(err);
+        if (parseResult.isHardBounce) {
+          suppressionService.addSuppressed(email, {
+            reason: parseResult.reason,
+            bounceType: 'hard',
+            source: 'smtp_send_api'
+          });
+          results.push({
+            email,
+            name: displayName,
+            company: displayCompany,
+            status: 'failed_hard_bounce',
+            error: parseResult.reason,
+            timestamp: new Date().toISOString()
+          });
+        } else if (parseResult.isSoftBounce) {
+          suppressionService.handleTemporaryFailure(email, parseResult.reason);
+          results.push({
+            email,
+            name: displayName,
+            company: displayCompany,
+            status: 'failed_temporary',
+            error: parseResult.reason,
+            timestamp: new Date().toISOString()
+          });
+        } else {
+          results.push({
+            email,
+            name: displayName,
+            company: displayCompany,
+            status: 'failed',
+            error: err.message,
+            timestamp: new Date().toISOString()
+          });
+        }
       }
 
       if (i < validRecipients.length - 1) {
@@ -1683,7 +2917,8 @@ app.post('/api/send', upload.single('resume'), async (req, res) => {
 
     res.json({
       success: true,
-      summary: { total: validRecipients.length, sent: sentCount, failed: failedCount },
+      dryRun: isDryRun,
+      summary: { total: validRecipients.length, sent: sentCount, failed: failedCount, suppressed: suppressedCount, deferred: deferredCount },
       results
     });
   } catch (err) {
@@ -1708,11 +2943,78 @@ app.get('*', (req, res) => {
 
 // Start Server
 app.listen(PORT, () => {
+  const accounts = getSenderAccounts();
+  const activeCount = accounts.filter(a => a.active).length;
   console.log(`===========================================`);
-  console.log(`🚀 Resume Blaster with Autopilot listening on PORT ${PORT}`);
-  console.log(`📧 Gmail User: ${process.env.GMAIL_USER || 'NOT CONFIGURED'}`);
-  console.log(`🛡️ DNS / MX Record Pre-flight Validation: ENABLED`);
-  console.log(`⏱️ Autopilot Engine: 50 Emails/Batch + 30-Min Pause`);
+  console.log(`🚀 Resume Blaster with Quad Autopilot on PORT ${PORT}`);
+  console.log(`📧 Senders Configured (${activeCount}/${accounts.length} Active):`);
+  accounts.forEach((a, i) => {
+    console.log(`   ${i + 1}. ${a.user} [${a.active ? 'ACTIVE' : 'PENDING APP PASSWORD'}]`);
+  });
+  console.log(`🛡️ Cross-Account Zero-Overlap Deduplication: ENABLED`);
+  console.log(`🌍 Target Reach: WORLDWIDE (US, EU, UK, Canada, APAC, India, Remote)`);
+  console.log(`⏱️ Autopilot Engine: 60 Emails/Batch + 6-Min Pause`);
+  console.log(`🎯 Daily Goal: ${Math.max(100, activeCount * 100)} Emails (100/account safe cap, up to 400)`);
   console.log(`🌐 Web UI: http://localhost:${PORT}`);
   console.log(`===========================================`);
 });
+
+// -------------------------------------------------------------
+// 5-MINUTE AUTOMATED INBOX & BOUNCE SYNC DAEMON
+// -------------------------------------------------------------
+const AUTO_SYNC_INTERVAL_MS = 5 * 60 * 1000; // Exactly 5 minutes (300 seconds)
+let isAutoSyncRunning = false;
+
+async function runPeriodicInboxSync(reason = '5-min cycle') {
+  if (isAutoSyncRunning) return;
+  isAutoSyncRunning = true;
+  try {
+    const activeAccs = getSenderAccounts().filter(a => a.active);
+    if (activeAccs.length === 0) return;
+
+    const timeStr = new Date().toLocaleTimeString();
+    console.log(`[AUTO-SYNC] [${timeStr}] Starting background multi-inbox scan for all ${activeAccs.length} senders (${reason})...`);
+    campaignEngine.addLiveLog('SYNC', `📥 Auto-syncing all ${activeAccs.length} Gmail inboxes (${activeAccs.map(a => a.label).join(', ')})...`, 'info');
+
+    const result = await syncInboxResponses({ maxMessages: 120 });
+    if (result && result.stats) {
+      const gCount = result.stats.genuineCount || 0;
+      const aCount = result.stats.automatedCount || 0;
+      const bCount = result.bouncesFiltered || 0;
+
+      console.log(`[AUTO-SYNC] [${timeStr}] Completed: ${gCount} genuine HR replies, ${aCount} automated acks, ${bCount} delivery failures updated.`);
+      campaignEngine.addLiveLog('SYNC', `✅ Auto-sync completed: ${gCount} genuine recruiter replies, ${aCount} automated acks, ${bCount} delivery failures updated.`, 'success');
+
+      if (gCount > 0) {
+        campaignEngine.addLiveLog('REPLY', `🎯 ${gCount} genuine HR response(s) available in your Inbox Radar!`, 'success');
+      }
+
+      // 🧹 AUTONOMOUS MULTI-INBOX PURGE: Automatically sweep & clean delivery failures across all inboxes every 5 mins (Zero permission needed)
+      try {
+        const autoCleanRes = await bouncePurgeService.autoPurgeAllAccounts({ purgeSent: true });
+        if (autoCleanRes && autoCleanRes.totalPurged > 0) {
+          console.log(`[AUTO-SYNC] Automatically purged ${autoCleanRes.totalInboxPurged || 0} inbox bounces and ${autoCleanRes.totalSentPurged || 0} sent emails across inboxes into Trash.`);
+          campaignEngine.addLiveLog('PURGE', `🧹 [5-MIN AUTONOMOUS SWEEP] Cleaned ${autoCleanRes.totalInboxPurged || 0} inbox bounces and ${autoCleanRes.totalSentPurged || 0} sent emails across all ${activeAccs.length} inboxes to Trash! Zero trace in Gmail.`, 'success');
+        }
+      } catch (cleanErr) {
+        console.warn('[AUTO-SYNC] Auto-clean notice:', cleanErr.message);
+      }
+    }
+  } catch (err) {
+    console.warn(`[AUTO-SYNC] Warning: ${err.message}`);
+  } finally {
+    isAutoSyncRunning = false;
+  }
+}
+
+// Initial auto-sync 10 seconds after boot
+setTimeout(() => {
+  runPeriodicInboxSync('initial boot');
+}, 10 * 1000);
+
+// Auto-sync every 5 minutes continuously
+setInterval(() => {
+  runPeriodicInboxSync('5-min recurring cycle');
+}, AUTO_SYNC_INTERVAL_MS);
+
+

@@ -1,0 +1,67 @@
+[
+  {
+    "company": "Tars Technologies",
+    "domain": "hellotars.com",
+    "type": "Remote"
+  },
+  {
+    "company": "Engati",
+    "domain": "engati.com",
+    "type": "Remote"
+  },
+  {
+    "company": "Hono HR",
+    "domain": "hono.ai",
+    "type": "Remote"
+  },
+  {
+    "company": "factoHR",
+    "domain": "factohr.com",
+    "type": "Mumbai"
+  },
+  {
+    "company": "Nihilent",
+    "domain": "nihilent.com",
+    "type": "Mumbai"
+  },
+  {
+    "company": "Tejas Networks",
+    "domain": "tejasnetworks.com",
+    "type": "Remote"
+  },
+  {
+    "company": "MapmyIndia",
+    "domain": "mapmyindia.com",
+    "type": "Remote"
+  },
+  {
+    "company": "Affine Analytics",
+    "domain": "affine.ai",
+    "type": "Remote"
+  },
+  {
+    "company": "Polestar Solutions",
+    "domain": "polestarsolutions.com",
+    "type": "Remote"
+  },
+  {
+    "company": "Incedo",
+    "domain": "incedoinc.com",
+    "type": "Remote"
+  },
+  {
+    "company": "UST Global India",
+    "domain": "ust.com",
+    "type": "Remote"
+  },
+  {
+    "company": "Expleo India",
+    "domain": "expleo.com",
+    "type": "Mumbai"
+  },
+  {
+    "company": "Quest Global",
+    "domain": "quest-global.com",
+    "type": "Remote"
+  }
+]

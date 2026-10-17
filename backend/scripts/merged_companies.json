@@ -1,0 +1,332 @@
+[
+  {
+    "company": "Swiggy",
+    "domain": "swiggy.com",
+    "type": "Mumbai"
+  },
+  {
+    "company": "Lenskart",
+    "domain": "lenskart.com",
+    "type": "Mumbai"
+  },
+  {
+    "company": "Atomberg Technologies",
+    "domain": "atomberg.com",
+    "type": "Mumbai"
+  },
+  {
+    "company": "Drools Pet Food",
+    "domain": "drools.com",
+    "type": "Mumbai"
+  },
+  {
+    "company": "Heads Up For Tails",
+    "domain": "headsupfortails.com",
+    "type": "Mumbai"
+  },
+  {
+    "company": "Flo Mattress",
+    "domain": "flomattress.com",
+    "type": "Mumbai"
+  },
+  {
+    "company": "Renee Cosmetics",
+    "domain": "reneecosmetics.in",
+    "type": "Mumbai"
+  },
+  {
+    "company": "Swiss Beauty",
+    "domain": "swissbeauty.in",
+    "type": "Mumbai"
+  },
+  {
+    "company": "Urbanic",
+    "domain": "urbanic.com",
+    "type": "Mumbai"
+  },
+  {
+    "company": "Virgio",
+    "domain": "virgio.com",
+    "type": "Mumbai"
+  },
+  {
+    "company": "Savana",
+    "domain": "savana.com",
+    "type": "Mumbai"
+  },
+  {
+    "company": "WareIQ",
+    "domain": "wareiq.com",
+    "type": "Mumbai"
+  },
+  {
+    "company": "ClickPost",
+    "domain": "clickpost.ai",
+    "type": "Mumbai"
+  },
+  {
+    "company": "Emiza Supply Chain",
+    "domain": "emizainc.com",
+    "type": "Mumbai"
+  },
+  {
+    "company": "GoComet",
+    "domain": "gocomet.com",
+    "type": "Mumbai"
+  },
+  {
+    "company": "Fleetx",
+    "domain": "fleetx.io",
+    "type": "Mumbai"
+  },
+  {
+    "company": "TrackoBit",
+    "domain": "trackobit.com",
+    "type": "Mumbai"
+  },
+  {
+    "company": "Roadcast",
+    "domain": "roadcast.in",
+    "type": "Mumbai"
+  },
+  {
+    "company": "Elixia Tech",
+    "domain": "elixiatech.com",
+    "type": "Mumbai"
+  },
+  {
+    "company": "Zypp Electric",
+    "domain": "zypp.app",
+    "type": "Remote"
+  },
+  {
+    "company": "Matter EV",
+    "domain": "matter.in",
+    "type": "Remote"
+  },
+  {
+    "company": "Oben Electric",
+    "domain": "obenelectric.com",
+    "type": "Remote"
+  },
+  {
+    "company": "Gullak Money",
+    "domain": "gullak.money",
+    "type": "Remote"
+  },
+  {
+    "company": "Multipl",
+    "domain": "multipl.xyz",
+    "type": "Remote"
+  },
+  {
+    "company": "Jiraaf",
+    "domain": "jiraaf.com",
+    "type": "Remote"
+  },
+  {
+    "company": "Alt Graaf",
+    "domain": "altgraaf.com",
+    "type": "Remote"
+  },
+  {
+    "company": "Hyperface",
+    "domain": "hyperface.co",
+    "type": "Remote"
+  },
+  {
+    "company": "Mihup",
+    "domain": "mihup.com",
+    "type": "Remote"
+  },
+  {
+    "company": "Fasal",
+    "domain": "fasal.co",
+    "type": "Remote"
+  },
+  {
+    "company": "AgNext",
+    "domain": "agnext.com",
+    "type": "Remote"
+  },
+  {
+    "company": "VWO (Wingify)",
+    "domain": "vwo.com",
+    "type": "Remote"
+  },
+  {
+    "company": "Knowlarity",
+    "domain": "knowlarity.com",
+    "type": "Remote"
+  },
+  {
+    "company": "Ozonetel Communications",
+    "domain": "ozonetel.com",
+    "type": "Remote"
+  },
+  {
+    "company": "MyOperator",
+    "domain": "myoperator.com",
+    "type": "Remote"
+  },
+  {
+    "company": "Wellversed",
+    "domain": "wellversed.in",
+    "type": "Remote"
+  },
+  {
+    "company": "MyHealthcare",
+    "domain": "myhealthcare.co",
+    "type": "Remote"
+  },
+  {
+    "company": "DocOnline",
+    "domain": "doconline.com",
+    "type": "Remote"
+  },
+  {
+    "company": "Medi Assist",
+    "domain": "mediassist.in",
+    "type": "Remote"
+  },
+  {
+    "company": "PokerBaazi",
+    "domain": "pokerbaazi.com",
+    "type": "Remote"
+  },
+  {
+    "company": "FanCode",
+    "domain": "fancode.com",
+    "type": "Mumbai"
+  },
+  {
+    "company": "Stan",
+    "domain": "getstan.app",
+    "type": "Remote"
+  },
+  {
+    "company": "Tars Technologies",
+    "domain": "hellotars.com",
+    "type": "Remote"
+  },
+  {
+    "company": "Engati",
+    "domain": "engati.com",
+    "type": "Remote"
+  },
+  {
+    "company": "Hono HR",
+    "domain": "hono.ai",
+    "type": "Remote"
+  },
+  {
+    "company": "factoHR",
+    "domain": "factohr.com",
+    "type": "Mumbai"
+  },
+  {
+    "company": "Nihilent",
+    "domain": "nihilent.com",
+    "type": "Mumbai"
+  },
+  {
+    "company": "Tejas Networks",
+    "domain": "tejasnetworks.com",
+    "type": "Remote"
+  },
+  {
+    "company": "MapmyIndia",
+    "domain": "mapmyindia.com",
+    "type": "Remote"
+  },
+  {
+    "company": "Affine Analytics",
+    "domain": "affine.ai",
+    "type": "Remote"
+  },
+  {
+    "company": "Polestar Solutions",
+    "domain": "polestarsolutions.com",
+    "type": "Remote"
+  },
+  {
+    "company": "Incedo",
+    "domain": "incedoinc.com",
+    "type": "Remote"
+  },
+  {
+    "company": "UST Global India",
+    "domain": "ust.com",
+    "type": "Remote"
+  },
+  {
+    "company": "Expleo India",
+    "domain": "expleo.com",
+    "type": "Mumbai"
+  },
+  {
+    "company": "Quest Global",
+    "domain": "quest-global.com",
+    "type": "Remote"
+  },
+  {
+    "company": "Falcon API",
+    "domain": "falcon.tech",
+    "type": "Remote"
+  },
+  {
+    "company": "Digio",
+    "domain": "digio.in",
+    "type": "Remote"
+  },
+  {
+    "company": "Leegality",
+    "domain": "leegality.com",
+    "type": "Remote"
+  },
+  {
+    "company": "Privado",
+    "domain": "privado.ai",
+    "type": "Remote"
+  },
+  {
+    "company": "Certa",
+    "domain": "certa.ai",
+    "type": "Remote"
+  },
+  {
+    "company": "Lucinity",
+    "domain": "lucinity.com",
+    "type": "Remote"
+  },
+  {
+    "company": "Karbon Card",
+    "domain": "karboncard.com",
+    "type": "Remote"
+  },
+  {
+    "company": "Epifi",
+    "domain": "epifi.com",
+    "type": "Remote"
+  },
+  {
+    "company": "ZestMoney",
+    "domain": "zestmoney.in",
+    "type": "Remote"
+  },
+  {
+    "company": "Simpl",
+    "domain": "getsimpl.com",
+    "type": "Remote"
+  },
+  {
+    "company": "Indifi",
+    "domain": "indifi.com",
+    "type": "Remote"
+  },
+  {
+    "company": "Kinara Capital",
+    "domain": "kinaracapital.com",
+    "type": "Remote"
+  }
+]

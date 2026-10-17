@@ -1,0 +1,417 @@
+[
+  {
+    "company": "Apptio India",
+    "domain": "apptio.com",
+    "type": "Remote"
+  },
+  {
+    "company": "ValueLabs",
+    "domain": "valuelabs.com",
+    "type": "Remote"
+  },
+  {
+    "company": "Ambuja Tech Pune",
+    "domain": "neeyamo.com",
+    "type": "Pune"
+  },
+  {
+    "company": "SignEasy",
+    "domain": "signeasy.com",
+    "type": "Remote"
+  },
+  {
+    "company": "Aquitas Solutions",
+    "domain": "aquitas-solutions.com",
+    "type": "Pune"
+  },
+  {
+    "company": "Miracle Software Systems",
+    "domain": "miraclesoft.com",
+    "type": "Remote"
+  },
+  {
+    "company": "Prolifics India",
+    "domain": "prolifics.com",
+    "type": "Remote"
+  },
+  {
+    "company": "Qualitia Software",
+    "domain": "qualitiasoft.com",
+    "type": "Pune"
+  },
+  {
+    "company": "Cloud4C Services",
+    "domain": "cloud4c.com",
+    "type": "Remote"
+  },
+  {
+    "company": "Motivity Labs",
+    "domain": "motivitylabs.com",
+    "type": "Remote"
+  },
+  {
+    "company": "Metalbook",
+    "domain": "metalbook.co",
+    "type": "Remote"
+  },
+  {
+    "company": "ProMobi Technologies",
+    "domain": "promobi.com",
+    "type": "Pune"
+  },
+  {
+    "company": "Pennant Technologies",
+    "domain": "pennanttech.com",
+    "type": "Remote"
+  },
+  {
+    "company": "Apps Associates",
+    "domain": "appsassociates.com",
+    "type": "Remote"
+  },
+  {
+    "company": "Kaar Technologies",
+    "domain": "kaartech.com",
+    "type": "Remote"
+  },
+  {
+    "company": "Maveric Systems",
+    "domain": "maveric-systems.com",
+    "type": "Remote"
+  },
+  {
+    "company": "CallHealth Services",
+    "domain": "callhealth.com",
+    "type": "Remote"
+  },
+  {
+    "company": "BORN Group India",
+    "domain": "borngroup.com",
+    "type": "Remote"
+  },
+  {
+    "company": "Financial Software & Systems",
+    "domain": "fsstech.com",
+    "type": "Remote"
+  },
+  {
+    "company": "Prodapt Solutions",
+    "domain": "prodapt.com",
+    "type": "Remote"
+  },
+  {
+    "company": "Lister Technologies",
+    "domain": "listertechnologies.com",
+    "type": "Remote"
+  },
+  {
+    "company": "Vernalis Systems",
+    "domain": "vernalis.com",
+    "type": "Remote"
+  },
+  {
+    "company": "Techwave Consulting",
+    "domain": "techwave.net",
+    "type": "Remote"
+  },
+  {
+    "company": "Mapmygenome",
+    "domain": "mapmygenome.in",
+    "type": "Remote"
+  },
+  {
+    "company": "Zealous System",
+    "domain": "zealousys.com",
+    "type": "Remote"
+  },
+  {
+    "company": "Contus Tech",
+    "domain": "contus.com",
+    "type": "Remote"
+  },
+  {
+    "company": "Incessant Technologies",
+    "domain": "incessanttechnologies.com",
+    "type": "Remote"
+  },
+  {
+    "company": "Agile Infoways",
+    "domain": "agileinfoways.com",
+    "type": "Remote"
+  },
+  {
+    "company": "SecureKloud Technologies",
+    "domain": "securekloud.com",
+    "type": "Remote"
+  },
+  {
+    "company": "eInfochips Arrow",
+    "domain": "einfochips.com",
+    "type": "Remote"
+  },
+  {
+    "company": "Argusoft India",
+    "domain": "argusoft.com",
+    "type": "Remote"
+  },
+  {
+    "company": "IBS Software Services",
+    "domain": "ibsplc.com",
+    "type": "Remote"
+  },
+  {
+    "company": "CareStack",
+    "domain": "carestack.com",
+    "type": "Remote"
+  },
+  {
+    "company": "DRC Systems",
+    "domain": "drcsystems.com",
+    "type": "Remote"
+  },
+  {
+    "company": "Addon Solutions",
+    "domain": "addonsolutions.com",
+    "type": "Remote"
+  },
+  {
+    "company": "Intuz Solutions",
+    "domain": "intuz.com",
+    "type": "Remote"
+  },
+  {
+    "company": "E2M Solutions",
+    "domain": "e2msolutions.com",
+    "type": "Remote"
+  },
+  {
+    "company": "SurveySparrow",
+    "domain": "surveysparrow.com",
+    "type": "Remote"
+  },
+  {
+    "company": "Gateway Group",
+    "domain": "gatewaygroup.com",
+    "type": "Remote"
+  },
+  {
+    "company": "Techuz InfoWeb",
+    "domain": "techuz.com",
+    "type": "Remote"
+  },
+  {
+    "company": "Techholding",
+    "domain": "techholding.co",
+    "type": "Remote"
+  },
+  {
+    "company": "Silverwing Technologies",
+    "domain": "silverwingtechnologies.com",
+    "type": "Remote"
+  },
+  {
+    "company": "OneClick Technologies",
+    "domain": "oneclicktechnologies.com",
+    "type": "Remote"
+  },
+  {
+    "company": "Streebo Inc",
+    "domain": "streebo.com",
+    "type": "Remote"
+  },
+  {
+    "company": "Envestnet India",
+    "domain": "envestnet.com",
+    "type": "Remote"
+  },
+  {
+    "company": "PIT Solutions",
+    "domain": "pitsolutions.com",
+    "type": "Remote"
+  },
+  {
+    "company": "Gemini Solutions",
+    "domain": "geminisolutions.com",
+    "type": "Remote"
+  },
+  {
+    "company": "Polus Software",
+    "domain": "polussoftware.com",
+    "type": "Remote"
+  },
+  {
+    "company": "Qualitest India",
+    "domain": "qualitestgroup.com",
+    "type": "Remote"
+  },
+  {
+    "company": "GrapeCity India",
+    "domain": "grapecity.com",
+    "type": "Remote"
+  },
+  {
+    "company": "Trenser Technology Solutions",
+    "domain": "trenser.com",
+    "type": "Remote"
+  },
+  {
+    "company": "Vinvish Technologies",
+    "domain": "vinvish.com",
+    "type": "Remote"
+  },
+  {
+    "company": "ThinkPalm Technologies",
+    "domain": "thinkpalm.com",
+    "type": "Remote"
+  },
+  {
+    "company": "ChicMic Studios",
+    "domain": "chicmic.in",
+    "type": "Remote"
+  },
+  {
+    "company": "Clavax Technologies",
+    "domain": "clavax.com",
+    "type": "Remote"
+  },
+  {
+    "company": "Hestabit Technologies",
+    "domain": "hestabit.com",
+    "type": "Remote"
+  },
+  {
+    "company": "Dotsquares",
+    "domain": "dotsquares.com",
+    "type": "Remote"
+  },
+  {
+    "company": "SmartData Enterprises",
+    "domain": "smartdatainc.com",
+    "type": "Remote"
+  },
+  {
+    "company": "Protonshub Technologies",
+    "domain": "protonshub.com",
+    "type": "Remote"
+  },
+  {
+    "company": "Logiciel Solutions",
+    "domain": "logicielsolutions.co.in",
+    "type": "Remote"
+  },
+  {
+    "company": "ITConnectUS",
+    "domain": "itconnectus.com",
+    "type": "Remote"
+  },
+  {
+    "company": "Wama Software",
+    "domain": "wamasoftware.com",
+    "type": "Remote"
+  },
+  {
+    "company": "XenonStack",
+    "domain": "xenonstack.com",
+    "type": "Remote"
+  },
+  {
+    "company": "Cyber Infrastructure (CIS)",
+    "domain": "cisin.com",
+    "type": "Remote"
+  },
+  {
+    "company": "Cerebrum Infotech",
+    "domain": "cerebruminfotech.com",
+    "type": "Remote"
+  },
+  {
+    "company": "GrayCell Technologies",
+    "domain": "graycelltech.com",
+    "type": "Remote"
+  },
+  {
+    "company": "Solitaire Infosys",
+    "domain": "solitaireinfosys.com",
+    "type": "Remote"
+  },
+  {
+    "company": "Seasia Infotech",
+    "domain": "seasiainfotech.com",
+    "type": "Remote"
+  },
+  {
+    "company": "Cybercom Creation",
+    "domain": "cybercomcreation.com",
+    "type": "Remote"
+  },
+  {
+    "company": "Exterro India",
+    "domain": "exterro.com",
+    "type": "Remote"
+  },
+  {
+    "company": "Skava Systems",
+    "domain": "skava.com",
+    "type": "Remote"
+  },
+  {
+    "company": "SBL Knowledge Services",
+    "domain": "sblcorp.com",
+    "type": "Remote"
+  },
+  {
+    "company": "BimSym Technologies",
+    "domain": "bimsym.com",
+    "type": "Remote"
+  },
+  {
+    "company": "Apptivo India",
+    "domain": "apptivo.com",
+    "type": "Remote"
+  },
+  {
+    "company": "Elysium Technologies",
+    "domain": "elysiumtechnologies.com",
+    "type": "Remote"
+  },
+  {
+    "company": "TechInfini Solutions",
+    "domain": "techinfini.com",
+    "type": "Remote"
+  },
+  {
+    "company": "Techshu",
+    "domain": "techshu.com",
+    "type": "Remote"
+  },
+  {
+    "company": "Admatic Software",
+    "domain": "admatic.in",
+    "type": "Remote"
+  },
+  {
+    "company": "Webgility India",
+    "domain": "webgility.com",
+    "type": "Remote"
+  },
+  {
+    "company": "Kovai.co",
+    "domain": "kovai.co",
+    "type": "Remote"
+  },
+  {
+    "company": "Innoraft Solutions",
+    "domain": "innoraft.com",
+    "type": "Remote"
+  },
+  {
+    "company": "Kredent InfoEdge",
+    "domain": "kredent.com",
+    "type": "Remote"
+  },
+  {
+    "company": "Infograins Software",
+    "domain": "infograins.com",
+    "type": "Remote"
+  }
+]

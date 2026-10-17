@@ -1,0 +1,92 @@
+[
+  {
+    "company": "SPEC INDIA",
+    "domain": "spec-india.com",
+    "type": "Mumbai"
+  },
+  {
+    "company": "ZealousWeb",
+    "domain": "zealousweb.com",
+    "type": "Mumbai"
+  },
+  {
+    "company": "Dev Technosys",
+    "domain": "devtechnosys.com",
+    "type": "Remote"
+  },
+  {
+    "company": "Octal Info Solution",
+    "domain": "octalsoftware.com",
+    "type": "Remote"
+  },
+  {
+    "company": "Damco Solutions",
+    "domain": "damco.com",
+    "type": "Remote"
+  },
+  {
+    "company": "Chetu India",
+    "domain": "chetu.com",
+    "type": "Remote"
+  },
+  {
+    "company": "Vinove Software",
+    "domain": "vinove.com",
+    "type": "Remote"
+  },
+  {
+    "company": "Sparx IT Solutions",
+    "domain": "sparxitsolutions.com",
+    "type": "Remote"
+  },
+  {
+    "company": "Classic Informatics",
+    "domain": "classicinformatics.com",
+    "type": "Remote"
+  },
+  {
+    "company": "PixelCrayons",
+    "domain": "pixelcrayons.com",
+    "type": "Remote"
+  },
+  {
+    "company": "Nine Hertz",
+    "domain": "theninehertz.com",
+    "type": "Remote"
+  },
+  {
+    "company": "SemiDot InfoTech",
+    "domain": "semidotinfotech.com",
+    "type": "Remote"
+  },
+  {
+    "company": "Codiant",
+    "domain": "codiant.com",
+    "type": "Mumbai"
+  },
+  {
+    "company": "Yugasa Software Labs",
+    "domain": "yugasa.com",
+    "type": "Remote"
+  },
+  {
+    "company": "InfoBeans Technologies",
+    "domain": "infobeans.com",
+    "type": "Mumbai"
+  },
+  {
+    "company": "Onward Technologies",
+    "domain": "onwardgroup.com",
+    "type": "Mumbai"
+  },
+  {
+    "company": "Saksoft",
+    "domain": "saksoft.com",
+    "type": "Remote"
+  },
+  {
+    "company": "Ramco Systems",
+    "domain": "ramco.com",
+    "type": "Remote"
+  }
+]

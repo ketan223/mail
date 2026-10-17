@@ -9,4 +9,13 @@ node_modules/
 *.log
 uploads/
 backend/data/*.pdf
-
+HR_EMAIL/
+scratch/
+backend/data/sent_log.json
+backend/data/campaign_state.json
+backend/data/bounce_purge_log.json
+backend/data/classified_replies.json
+backend/data/email_audit_log.json
+backend/data/inbox_responses.json
+backend/data/suppression_list.json
+backend/data/vault_history.json
