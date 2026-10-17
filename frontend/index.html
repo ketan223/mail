@@ -1068,14 +1068,24 @@ Ketan Tiwari
         <div class="bounces-hero-card">
           <div class="bounces-hero-header">
             <div class="bounces-hero-title-group">
-              <div class="bounces-badge">
-                <span class="pulse-dot-red"></span>
-                <span>AUTONOMOUS GMAIL NDR PURGE</span>
+              <div class="bounces-badge-row" style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px; flex-wrap: wrap;">
+                <div class="bounces-badge">
+                  <span class="pulse-dot-red"></span>
+                  <span>AUTONOMOUS GMAIL NDR PURGE</span>
+                </div>
+                <div class="auto-purge-live-ticker" id="autoPurgeLiveTicker">
+                  <span class="pulse-dot-green"></span>
+                  <span>⚡ Auto-Sweeper Active · Next sweep in: <strong id="ghostSweeperTimer" style="color: #38bdf8; font-family: var(--font-mono);">05:00</strong></span>
+                </div>
               </div>
               <h2>Inbox Ghost & Bidirectional Sent Cleaner</h2>
               <p class="bounces-desc">
                 Permanently sweeps out <strong>"Address not found"</strong>, <strong>"Mail Delivery Subsystem"</strong>, dead domains, and <strong>550 User Unknown</strong> rejection notices from your INBOX <strong>AND</strong> removes original outgoing emails from Gmail Sent Mail. Zero "This reply to this message was deleted" threads left in your Gmail!
               </p>
+              <div class="auto-clean-guarantee-note" style="margin-top: 8px; font-size: 12px; color: #34d399; font-weight: 500; display: flex; align-items: center; gap: 6px;">
+                <span>✨</span>
+                <span><strong>100% Fully Autonomous:</strong> Cleaner runs automatically every 5 minutes in the background. Manual buttons are only optional instant overrides.</span>
+              </div>
             </div>
             <div class="bounces-actions-wrap">
               <button type="button" class="btn-clean-subtle" id="rescanBouncesBtn">
@@ -1085,7 +1095,7 @@ Ketan Tiwari
                 <span id="sweepSentBtnText">🧹 Clean Sent Mail</span>
               </button>
               <button type="button" class="btn-clean-danger" id="openPurgeModalBtn">
-                <span id="purgeAllBtnText">🧹 Purge Confirmed Bounces</span>
+                <span id="purgeAllBtnText">⚡ Purge Now (Optional)</span>
               </button>
             </div>
           </div>

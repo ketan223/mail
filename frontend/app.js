@@ -2549,6 +2549,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const sweepSentBtnText = document.getElementById('sweepSentBtnText');
   const openPurgeModalBtn = document.getElementById('openPurgeModalBtn');
   const purgeAllBtnText = document.getElementById('purgeAllBtnText');
+  const ghostSweeperTimer = document.getElementById('ghostSweeperTimer');
+  let ghostAutoSweeperRemainingSec = 300;
+  let isGhostAutoSweeping = false;
 
   const bouncesIndicationBox = document.getElementById('bouncesIndicationBox');
   const bouncesIndicationIcon = document.getElementById('bouncesIndicationIcon');
@@ -2734,6 +2737,72 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
   }
+
+  // -------------------------------------------------------------
+  // 5-MINUTE AUTONOMOUS SWEEPER TICKER & BACKGROUND EXECUTOR
+  // (Zero manual clicks needed: cleans Inbox & Sent Mail automatically!)
+  // -------------------------------------------------------------
+  function updateGhostSweeperTimerUI() {
+    if (!ghostSweeperTimer) return;
+    const m = Math.floor(ghostAutoSweeperRemainingSec / 60);
+    const s = ghostAutoSweeperRemainingSec % 60;
+    ghostSweeperTimer.textContent = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+  }
+
+  async function syncGhostSweeperStatus() {
+    try {
+      const res = await fetch('/api/bounces/auto-status');
+      const data = await res.json();
+      if (data && typeof data.remainingSeconds === 'number') {
+        ghostAutoSweeperRemainingSec = data.remainingSeconds;
+        updateGhostSweeperTimerUI();
+      }
+    } catch (e) {}
+  }
+
+  // 1-Second Countdown Ticker: Automatically fires every 5 minutes
+  setInterval(async () => {
+    ghostAutoSweeperRemainingSec--;
+    if (ghostAutoSweeperRemainingSec <= 0) {
+      ghostAutoSweeperRemainingSec = 300; // Reset 5-min countdown
+      updateGhostSweeperTimerUI();
+
+      // Trigger multi-inbox background auto-sweep across all accounts without requiring user interaction
+      if (!isGhostAutoSweeping) {
+        isGhostAutoSweeping = true;
+        try {
+          const res = await fetch('/api/bounces/auto-sweep', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ sweepHistorical: true })
+          });
+          const sweepData = await res.json();
+          if (sweepData && sweepData.totalPurged > 0) {
+            showToast(`🧹 [5-Min Auto-Sweeper] Automatically cleaned ${sweepData.totalInboxPurged || 0} bounce notice(s) and ${sweepData.totalSentPurged || 0} sent email(s) across inboxes to Trash!`, 'success');
+          }
+        } catch (e) {
+          console.warn('Ghost auto-sweep error:', e.message);
+        } finally {
+          isGhostAutoSweeping = false;
+          loadBounceScanner(activeBounceAccount, { silent: true });
+          loadBounceHistory();
+        }
+      }
+    } else {
+      updateGhostSweeperTimerUI();
+    }
+  }, 1000);
+
+  // Sync with backend timer every 60s
+  setInterval(syncGhostSweeperStatus, 60000);
+  syncGhostSweeperStatus();
+
+  // Auto-refresh bounce counts silently every 30s so user never sees stale numbers
+  setInterval(() => {
+    if (activeBounceAccount) {
+      loadBounceScanner(activeBounceAccount, { silent: true });
+    }
+  }, 30000);
 
   // Scan bounces function
   async function loadBounceScanner(account = activeBounceAccount, { silent = false } = {}) {

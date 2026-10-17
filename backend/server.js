@@ -2377,6 +2377,29 @@ app.post('/api/bounces/purge-sent', async (req, res) => {
   }
 });
 
+// Trigger full autonomous multi-inbox sweep across ALL sender accounts (Inbox + Sent Mail)
+app.post('/api/bounces/auto-sweep', async (req, res) => {
+  try {
+    const sweepHistorical = req.body.sweepHistorical !== false;
+    const result = await bouncePurgeService.autoPurgeAllAccounts({
+      purgeSent: true,
+      sweepHistorical
+    });
+    try {
+      if (result && result.totalPurged > 0) {
+        campaignEngine.addLiveLog(
+          'PURGE',
+          `🧹 [AUTONOMOUS SWEEP] Auto-purged ${result.totalInboxPurged || 0} inbox bounces and ${result.totalSentPurged || 0} sent emails across inboxes to Trash!`,
+          'success'
+        );
+      }
+    } catch (e) {}
+    res.json({ success: true, ...result });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to run auto-sweep: ' + err.message });
+  }
+});
+
 // Purge single bounce UID (e.g. for doubtful item review)
 app.post('/api/bounces/purge-single', async (req, res) => {
   try {
@@ -2439,6 +2462,25 @@ app.post('/api/bounces/empty-trash', async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
+});
+
+// Autonomous 5-Minute Sweeper Status & Interval
+const AUTO_SYNC_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
+let lastAutoPurgeAt = null;
+let nextAutoPurgeAt = Date.now() + 10 * 1000;
+let lastAutoPurgeSummary = null;
+
+// Get autonomous 5-min sweeper status & countdown
+app.get('/api/bounces/auto-status', (req, res) => {
+  const remainingMs = Math.max(0, nextAutoPurgeAt - Date.now());
+  res.json({
+    active: true,
+    intervalMs: AUTO_SYNC_INTERVAL_MS,
+    remainingSeconds: Math.ceil(remainingMs / 1000),
+    lastAutoPurgeAt,
+    nextAutoPurgeAt: new Date(nextAutoPurgeAt).toISOString(),
+    lastSummary: lastAutoPurgeSummary
+  });
 });
 
 // ---------------- AUTOPILOT CAMPAIGN ENDPOINTS ----------------
@@ -2962,7 +3004,6 @@ app.listen(PORT, () => {
 // -------------------------------------------------------------
 // 5-MINUTE AUTOMATED INBOX & BOUNCE SYNC DAEMON
 // -------------------------------------------------------------
-const AUTO_SYNC_INTERVAL_MS = 5 * 60 * 1000; // Exactly 5 minutes (300 seconds)
 let isAutoSyncRunning = false;
 
 async function runPeriodicInboxSync(reason = '5-min cycle') {
@@ -2991,7 +3032,10 @@ async function runPeriodicInboxSync(reason = '5-min cycle') {
 
       // 🧹 AUTONOMOUS MULTI-INBOX PURGE: Automatically sweep & clean delivery failures across all inboxes every 5 mins (Zero permission needed)
       try {
-        const autoCleanRes = await bouncePurgeService.autoPurgeAllAccounts({ purgeSent: true });
+        const autoCleanRes = await bouncePurgeService.autoPurgeAllAccounts({ purgeSent: true, sweepHistorical: true });
+        lastAutoPurgeAt = new Date().toISOString();
+        nextAutoPurgeAt = Date.now() + AUTO_SYNC_INTERVAL_MS;
+        lastAutoPurgeSummary = autoCleanRes;
         if (autoCleanRes && autoCleanRes.totalPurged > 0) {
           console.log(`[AUTO-SYNC] Automatically purged ${autoCleanRes.totalInboxPurged || 0} inbox bounces and ${autoCleanRes.totalSentPurged || 0} sent emails across inboxes into Trash.`);
           campaignEngine.addLiveLog('PURGE', `🧹 [5-MIN AUTONOMOUS SWEEP] Cleaned ${autoCleanRes.totalInboxPurged || 0} inbox bounces and ${autoCleanRes.totalSentPurged || 0} sent emails across all ${activeAccs.length} inboxes to Trash! Zero trace in Gmail.`, 'success');
@@ -3014,6 +3058,7 @@ setTimeout(() => {
 
 // Auto-sync every 5 minutes continuously
 setInterval(() => {
+  nextAutoPurgeAt = Date.now() + AUTO_SYNC_INTERVAL_MS;
   runPeriodicInboxSync('5-min recurring cycle');
 }, AUTO_SYNC_INTERVAL_MS);
 
